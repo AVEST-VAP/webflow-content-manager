@@ -1,4 +1,11 @@
-import { WordingData, ChangeReport, DeploymentReport } from './types';
+import { WordingData, ChangeReport, DeploymentReport } from '../types';
+import { PAGE_LOAD_DELAY_MS, ATTRIBUTES, DEFAULTS } from '../utils/constants';
+
+// Type for page items from Webflow API
+type PageOrFolder = Awaited<ReturnType<typeof webflow.getAllPagesAndFolders>>[number];
+
+// Type guard for Page (not Folder)
+const isPage = (item: PageOrFolder): boolean => item.type === 'Page';
 
 /**
  * Classe principale pour gérer le déploiement de wording sur une page Webflow
@@ -16,18 +23,25 @@ export class SiteDeployer {
   /**
    * Valide le format du JSON de wording
    */
-  validateWordingData(data: any): { valid: boolean; errors: string[] } {
+  validateWordingData(data: unknown): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    if (!data.site_id) {
+    if (typeof data !== 'object' || data === null) {
+      errors.push('Les données doivent être un objet valide');
+      return { valid: false, errors };
+    }
+
+    const wordingData = data as Partial<WordingData>;
+
+    if (!wordingData.site_id) {
       errors.push('Champ "site_id" manquant');
     }
 
-    if (!data.version) {
+    if (!wordingData.version) {
       errors.push('Champ "version" manquant');
     }
 
-    if (!data.content || typeof data.content !== 'object') {
+    if (!wordingData.content || typeof wordingData.content !== 'object') {
       errors.push('Champ "content" manquant ou invalide');
     }
 
@@ -154,7 +168,7 @@ export class SiteDeployer {
 
         try {
           // Trouver l'élément correspondant
-          let foundElement: any = null;
+          let foundElement: typeof allElements[number] | null = null;
 
           for (const el of allElements) {
             if (el.customAttributes === true) {
@@ -304,12 +318,12 @@ export class SiteDeployer {
 
       // Récupérer toutes les pages et dossiers
       const pagesAndFolders = await webflow.getAllPagesAndFolders();
-      let allPages = pagesAndFolders?.filter((item: any): item is any => item.type === 'Page') || [];
+      const allPages = pagesAndFolders?.filter(isPage) ?? [];
 
       // Filtrer les pages si on a des cibles spécifiques
       let pagesToProcess = allPages;
       if (hasTargetPages) {
-        const pagesToProcessTemp: any[] = [];
+        const pagesToProcessTemp: PageOrFolder[] = [];
 
         for (const page of allPages) {
           let pageName = '';
@@ -363,10 +377,10 @@ export class SiteDeployer {
 
         try {
           // Basculer vers la page
-          await webflow.switchPage(page);
+          await webflow.switchPage(page as Parameters<typeof webflow.switchPage>[0]);
 
           // Attendre que le Designer charge la page
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, PAGE_LOAD_DELAY_MS));
 
           // Scanner la page
           const preview = await this.previewChanges();
@@ -505,12 +519,12 @@ export class SiteDeployer {
 
       // Récupérer toutes les pages et dossiers
       const pagesAndFolders = await webflow.getAllPagesAndFolders();
-      let allPages = pagesAndFolders?.filter((item: any): item is any => item.type === 'Page') || [];
+      const allPages = pagesAndFolders?.filter(isPage) ?? [];
 
       // Filtrer les pages si on a des cibles spécifiques
       let pagesToProcess = allPages;
       if (hasTargetPages) {
-        const pagesToProcessTemp: any[] = [];
+        const pagesToProcessTemp: PageOrFolder[] = [];
 
         for (const page of allPages) {
           let pageName = '';
@@ -566,10 +580,10 @@ export class SiteDeployer {
 
         try {
           // Basculer vers la page
-          await webflow.switchPage(page);
+          await webflow.switchPage(page as Parameters<typeof webflow.switchPage>[0]);
 
           // Attendre un peu que le Designer charge la page
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, PAGE_LOAD_DELAY_MS));
 
           // Appliquer les changements sur cette page
           const report = await this.applyChanges();
