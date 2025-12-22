@@ -104,15 +104,13 @@ body {
   gap: 12px;
 }
 
-/* Logo placeholder if needed, using CSS shape for now or just text */
-.app-title::before {
-  content: '';
-  display: block;
-  width: 24px;
-  height: 24px;
-  background: var(--primary);
-  border-radius: 6px;
-  opacity: 0.9;
+/* Logo placeholder removed - using img tag */
+.app-title img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  /* Slightly larger radius for larger image */
+  object-fit: contain;
 }
 
 .app-subtitle {

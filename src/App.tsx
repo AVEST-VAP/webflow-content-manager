@@ -37,7 +37,7 @@ const AppContent: React.FC = () => {
 
         actions.scanComplete(result);
       } catch (err) {
-        actions.setError('Scan error: ' + (err instanceof Error ? err.message : 'unknown error'));
+        actions.setError('Erreur de scan: ' + (err instanceof Error ? err.message : 'erreur inconnue'));
         actions.setStep('input');
         actions.setLoading(false);
       }
@@ -51,7 +51,7 @@ const AppContent: React.FC = () => {
         actions.setPreviewData({ single: true, ...result });
         actions.setStep('preview');
       } catch (err) {
-        actions.setError('Scan error: ' + (err instanceof Error ? err.message : 'unknown error'));
+        actions.setError('Erreur de scan: ' + (err instanceof Error ? err.message : 'erreur inconnue'));
       } finally {
         actions.setLoading(false);
       }
@@ -68,8 +68,8 @@ const AppContent: React.FC = () => {
       : (state.previewData.summary?.totalWithValue || 0);
 
     const confirmMessage = isSinglePage
-      ? `Apply ${changesCount} changes?\n\nThis will modify the current page.`
-      : `Apply changes to ${state.previewData.summary?.totalPages || 0} pages?\n\nThis will modify multiple pages.`;
+      ? `Appliquer ${changesCount} changements ?\n\nCela modifiera la page actuelle.`
+      : `Appliquer les changements sur ${state.previewData.summary?.totalPages || 0} pages ?\n\nCela modifiera plusieurs pages.`;
 
     if (!window.confirm(confirmMessage)) return;
 
@@ -82,7 +82,7 @@ const AppContent: React.FC = () => {
         actions.deployComplete(report);
       } else {
         actions.setStep('scan-progress');
-        actions.setScanProgress({ currentPage: 'Starting deployment...', completed: 0, total: 0 });
+        actions.setScanProgress({ currentPage: 'Démarrage du déploiement...', completed: 0, total: 0 });
 
         const result = await deployer.deployToAllPages((progress) => {
           actions.setScanProgress(progress);
@@ -106,7 +106,7 @@ const AppContent: React.FC = () => {
         });
       }
     } catch (err) {
-      actions.setError('Apply error: ' + (err instanceof Error ? err.message : 'unknown error'));
+      actions.setError('Erreur application: ' + (err instanceof Error ? err.message : 'erreur inconnue'));
       actions.setStep('input');
     } finally {
       actions.setLoading(false);
@@ -119,8 +119,11 @@ const AppContent: React.FC = () => {
       <div className="app-container">
         <div className="app-inner">
           <div className="app-header">
-            <h1 className="app-title">Webflow Content Manager</h1>
-            <p className="app-subtitle">Loading...</p>
+            <h1 className="app-title">
+              <img src="logo.png" alt="Logo" />
+              Webflow Content Manager
+            </h1>
+            <p className="app-subtitle">Chargement...</p>
           </div>
         </div>
       </div>
@@ -131,9 +134,12 @@ const AppContent: React.FC = () => {
     <div className="app-container">
       <div className="app-inner">
         <div className="app-header">
-          <h1 className="app-title">Webflow Content Manager</h1>
+          <h1 className="app-title">
+            <img src="logo.png" alt="Logo" />
+            Webflow Content Manager
+          </h1>
           <p className="app-subtitle">
-            Site: <strong>{siteInfo?.siteName}</strong> ({siteInfo?.siteId})
+            Site : <strong>{siteInfo?.siteName}</strong> ({siteInfo?.siteId})
           </p>
         </div>
 

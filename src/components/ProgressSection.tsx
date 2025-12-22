@@ -15,7 +15,7 @@ export const ProgressSection: React.FC<ProgressSectionProps> = ({ scanProgress }
 
   return (
     <div className="section">
-      <h2 className="section-title">Scanning...</h2>
+      <h2 className="section-title">Scan en cours...</h2>
 
       <div className="card">
         <div className="mb-4">

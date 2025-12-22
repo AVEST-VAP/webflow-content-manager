@@ -27,18 +27,18 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
 
   return (
     <div className="section">
-      <h2 className="section-title">Preview</h2>
+      <h2 className="section-title">Aperçu</h2>
 
       {/* Single page mode */}
       {isSinglePage ? (
         <>
           <div className="flex-between mb-4">
             <span className="badge badge-success">
-              {changesWithValue.length} to apply
+              {changesWithValue.length} à appliquer
             </span>
             {previewData.missingKeys && previewData.missingKeys.length > 0 ? (
               <span className="badge badge-warning">
-                {previewData.missingKeys.length} missing
+                {previewData.missingKeys.length} manquants
               </span>
             ) : null}
           </div>
@@ -51,7 +51,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
                   {change.hasValue ? (
                     <span className="badge badge-success">OK</span>
                   ) : (
-                    <span className="badge badge-warning">No value</span>
+                    <span className="badge badge-warning">Aucune valeur</span>
                   )}
                 </div>
                 {change.newValue ? (
@@ -78,12 +78,12 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
             </span>
             {previewData.summary.totalMissing > 0 ? (
               <span className="badge badge-warning">
-                {previewData.summary.totalMissing} missing
+                {previewData.summary.totalMissing} manquants
               </span>
             ) : null}
             {previewData.summary.unusedKeys && previewData.summary.unusedKeys.length > 0 ? (
               <span className="badge badge-warning">
-                {previewData.summary.unusedKeys.length} keys not found
+                {previewData.summary.unusedKeys.length} clés non trouvées
               </span>
             ) : null}
           </div>
@@ -100,14 +100,14 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
               color: '#854d0e',
             }}>
               <strong style={{ display: 'block', marginBottom: '8px' }}>
-                Keys from JSON not found on pages:
+                Clés du JSON absentes des pages :
               </strong>
               {previewData.summary.unusedKeys.slice(0, MAX_DISPLAYED_WARNINGS).map((key: string, i: number) => (
                 <div key={i} style={{ marginBottom: '4px' }}>* {key}</div>
               ))}
               {previewData.summary.unusedKeys.length > MAX_DISPLAYED_WARNINGS ? (
                 <div style={{ marginTop: '8px', color: '#a16207' }}>
-                  ... and {previewData.summary.unusedKeys.length - MAX_DISPLAYED_WARNINGS} more
+                  ... et {previewData.summary.unusedKeys.length - MAX_DISPLAYED_WARNINGS} autres
                 </div>
               ) : null}
             </div>
@@ -125,7 +125,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
                     </span>
                     {pagePreview.stats.missing > 0 ? (
                       <span className="badge badge-warning">
-                        {pagePreview.stats.missing} missing
+                        {pagePreview.stats.missing} manquants
                       </span>
                     ) : null}
                   </div>
@@ -144,7 +144,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
           className="btn btn-primary"
           style={{ opacity: loading || !canApply ? 0.5 : 1 }}
         >
-          {loading ? 'Applying...' : 'Apply changes'}
+          {loading ? 'Application...' : 'Appliquer les changements'}
         </button>
 
         <div style={{ display: 'flex', gap: '12px' }}>
@@ -154,7 +154,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
             className="btn btn-secondary"
             style={{ flex: 1, opacity: loading ? 0.5 : 1 }}
           >
-            Rescan
+            Scanner à nouveau
           </button>
 
           <button
@@ -162,7 +162,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
             className="btn btn-secondary"
             style={{ flex: 1 }}
           >
-            Cancel
+            Annuler
           </button>
         </div>
       </div>
