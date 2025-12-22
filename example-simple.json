@@ -1,0 +1,7 @@
+{
+  "site_id": "client-demo",
+  "version": "1.0.0",
+  "content": {
+    "home.hero.title": "Nouveau Titre de la Page"
+  }
+}
