@@ -206,6 +206,12 @@ Vous pouvez modifier la destination d'un bouton ou d'un lien.
 2.  Ajoutez `data-wording-key="home.cta_link"`.
 3.  Ajoutez `data-wording-mode="link"`.
 
+> **Important - Boutons Natifs vs Link Blocks :**
+> L'élément "Button" natif de Webflow ne permet pas de modifier son texte via l'API.
+> Si vous voulez modifier le TEXTE d'un bouton, utilisez une structure : **Link Block** (pour le lien) + **Text Block** (pour le texte) à l'intérieur.
+> - Sur le Link Block : `data-wording-key="...link"` et `data-wording-mode="link"`
+> - Sur le Text Block : `data-wording-key="...text"` (sans mode)
+
 > **Note :** Si vous mettez une URL (`https://...`), ça crée un lien externe. Si vous mettez un nom de page (ex: `Nos Agences`), ça crée un lien interne intelligent.
 
 #### 🧩 Gérer les Composants (Avancé)

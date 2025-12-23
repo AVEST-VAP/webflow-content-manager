@@ -167,24 +167,21 @@ site-deployer/
 
 ## 🔑 Fonctionnalités Clés
 
-### ✅ Implémenté (v1.0)
-
-- ✅ Upload de JSON manuel (copier/coller)
-- ✅ Validation du schéma JSON
-- ✅ Scan de la page pour `data-wording-key`
-- ✅ Prévisualisation des changements
-- ✅ Application des changements (texte uniquement)
-- ✅ Rapport de déploiement téléchargeable
+### ✅ Implémenté
+- ✅ Import CSV (Drag & Drop) et JSON
+- ✅ Validation du schéma de données
+- ✅ Prévisualisation avec rapport d'erreurs détaillé
+- ✅ Application texte, HTML, et images (`src`)
+- ✅ Gestion intelligente des liens (`href`, `page`)
+- ✅ Mise à jour des Propriétés de Composants (`prop:Name`)
+- ✅ Dépôt de fichier avec feedback visuel
 - ✅ Détection des clés manquantes/inutilisées
+- ✅ Rapport de déploiement téléchargeable
 
 ### 🚧 À venir (v2.0)
-
-- ⏳ Support des liens (`href`)
-- ⏳ Support des images (`src`)
-- ⏳ Support HTML (`innerHTML`)
 - ⏳ Fetch JSON depuis URL
 - ⏳ Intégration Google Sheets
-- ⏳ Mode "Appliquer à toutes les pages"
+- ⏳ Mode "Appliquer à toutes les pages" (Déjà partiellement supporté via import global)
 
 ## 🐛 Dépannage
 
