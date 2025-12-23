@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { WordingData } from '../types';
 import { parseCSV, csvRowsToContent } from '../utils/csvParser';
 import { DEFAULTS } from '../utils/constants';
-import { SiteDeployer } from '../services/deployer';
+import { ContentManager } from '../services/deployer';
 
 interface InputSectionProps {
   siteId: string;
@@ -10,13 +10,16 @@ interface InputSectionProps {
   wordingData: WordingData | null;
   loading: boolean;
   error: string;
-  deployer: SiteDeployer;
+  deployer: ContentManager;
   onJsonInputChange: (value: string) => void;
   onLoadSuccess: (data: WordingData, jsonInput: string) => void;
   onError: (error: string) => void;
   onScan: () => void;
 }
 
+/**
+ * Section d'import pour CSV et JSON
+ */
 /**
  * Section d'import pour CSV et JSON
  */
@@ -32,11 +35,13 @@ export const InputSection: React.FC<InputSectionProps> = ({
   onError,
   onScan,
 }) => {
-  // Import CSV
-  const handleImportCSV = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const [activeTab, setActiveTab] = React.useState<'csv' | 'json'>('csv');
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [selectedFilename, setSelectedFilename] = React.useState<string | null>(null);
 
+  // Common CSV processing
+  const processCSV = useCallback(async (file: File) => {
+    setSelectedFilename(file.name);
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
@@ -53,17 +58,49 @@ export const InputSection: React.FC<InputSectionProps> = ({
         deployer.loadWordingData(data);
         onLoadSuccess(data, JSON.stringify(content, null, 2));
       } catch (err) {
+        setSelectedFilename(null); // Reset on error
         onError('Erreur import CSV: ' + (err instanceof Error ? err.message : 'erreur inconnue'));
       }
     };
 
     reader.onerror = () => {
+      setSelectedFilename(null);
       onError('Erreur de lecture du fichier');
     };
 
     reader.readAsText(file);
-    event.target.value = '';
   }, [siteId, deployer, onLoadSuccess, onError]);
+
+  // Handle Drag & Drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+      processCSV(file);
+    } else {
+      onError('Veuillez déposer un fichier CSV valide');
+    }
+  }, [processCSV, onError]);
+
+  // Handle File Input
+  const handleImportCSV = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processCSV(file);
+      event.target.value = '';
+    }
+  }, [processCSV]);
 
   // Charger JSON
   const handleLoadJson = useCallback(() => {
@@ -106,51 +143,118 @@ export const InputSection: React.FC<InputSectionProps> = ({
     <div className="section">
       <h2 className="section-title">Importer le contenu</h2>
 
-      <div className="info-card">
-        <span>💡</span>
-        <span><strong>Mode intelligent :</strong> Le système détecte automatiquement si vos clés ciblent plusieurs pages (ex: <code>home.titre</code>, <code>about.titre</code>) ou une seule.</span>
+      <div className="info-card" style={{ flexDirection: 'column', gap: '8px' }}>
+        {activeTab === 'csv' ? (
+          <>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span>💡</span>
+              <strong>Format CSV & Webflow</strong>
+            </div>
+            <ul style={{ margin: '0', paddingLeft: '24px', fontSize: '13px', color: 'var(--primary-hover)' }}>
+              <li>Votre CSV doit contenir une colonne <strong>Key</strong> et une colonne <strong>Data</strong>.</li>
+              <li>Dans Webflow, ajoutez l'attribut <code>data-wording-key</code> sur les éléments à modifier (ex: <code>home.title</code>).</li>
+            </ul>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span>💡</span>
+              <strong>Format JSON</strong>
+            </div>
+            <ul style={{ margin: '0', paddingLeft: '24px', fontSize: '13px', color: 'var(--primary-hover)' }}>
+              <li>Collez un objet JSON simple (clé-valeur).</li>
+              <li>Exemple : <code>{"{\"home.title\": \"Mon Titre\"}"}</code></li>
+              <li>Les clés doivent correspondre aux attributs <code>data-wording-key</code> dans Webflow.</li>
+            </ul>
+          </>
+        )}
       </div>
 
-      {/* Import CSV */}
-      <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="csv-upload" className="btn btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-          📥 Importer un CSV
-        </label>
-        <input
-          id="csv-upload"
-          type="file"
-          accept=".csv"
-          onChange={handleImportCSV}
-          style={{ display: 'none' }}
-        />
-        <div className="hint" style={{ marginTop: '8px' }}>
-          Exportez votre Google Sheet en CSV avec les colonnes <span className="code-badge">Key</span> et <span className="code-badge">Data</span>
+      <div className="tabs">
+        <div
+          className={`tab-item ${activeTab === 'csv' ? 'active' : ''}`}
+          onClick={() => setActiveTab('csv')}
+        >
+          Fichier CSV
+        </div>
+        <div
+          className={`tab-item ${activeTab === 'json' ? 'active' : ''}`}
+          onClick={() => setActiveTab('json')}
+        >
+          Code JSON
         </div>
       </div>
 
-      <div style={{ textAlign: 'center', margin: '16px 0', color: '#9ca3af', fontSize: '13px' }}>
-        — ou —
-      </div>
+      {activeTab === 'csv' ? (
+        <div style={{ marginBottom: '20px' }}>
+          <label
+            className={`dropzone ${isDragging ? 'dragging' : ''} ${selectedFilename ? 'success' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              style={{ display: 'none' }}
+            />
 
-      <textarea
-        className="textarea"
-        placeholder='{"home.hero_title": "Bienvenue", "about.header": "À propos"}'
-        value={jsonInput}
-        onChange={(e) => onJsonInputChange(e.target.value)}
-      />
-      <div className="hint">
-        Le <span className="code-badge">site_id</span> est injecté automatiquement
-      </div>
+            {selectedFilename ? (
+              <>
+                <span className="dropzone-icon" style={{ fontSize: '32px' }}>✅</span>
+                <span className="dropzone-text" style={{ color: 'var(--success)', fontWeight: 'bold' }}>
+                  {selectedFilename}
+                </span>
+                <span className="dropzone-hint">
+                  Fichier chargé avec succès ! Cliquez pour changer.
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="dropzone-icon">📥</span>
+                <span className="dropzone-text">
+                  {isDragging ? 'Déposez le fichier ici' : 'Glissez votre fichier CSV ici'}
+                </span>
+                <span className="dropzone-hint">
+                  ou cliquez pour parcourir vos fichiers
+                </span>
+              </>
+            )}
+          </label>
+          <div style={{
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+            marginTop: '8px',
+            textAlign: 'center'
+          }}>
+            Format attendu : Colonnes <code>Key</code> et <code>Data</code>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: '20px' }}>
+          <textarea
+            className="textarea"
+            placeholder='{"home.hero_title": "Bienvenue", "about.header": "À propos"}'
+            value={jsonInput}
+            onChange={(e) => onJsonInputChange(e.target.value)}
+            style={{ height: '200px' }}
+          />
+          <div className="hint">
+            Le <span className="code-badge">site_id</span> est injecté automatiquement
+          </div>
 
-      <div style={{ marginTop: '16px' }}>
-        <button
-          onClick={handleLoadJson}
-          disabled={!jsonInput.trim()}
-          className="btn btn-primary"
-        >
-          Charger le JSON
-        </button>
-      </div>
+          <div style={{ marginTop: '16px' }}>
+            <button
+              onClick={handleLoadJson}
+              disabled={!jsonInput.trim()}
+              className="btn btn-primary"
+            >
+              Charger le JSON
+            </button>
+          </div>
+        </div>
+      )}
 
       {error ? (
         <div className="error-box">

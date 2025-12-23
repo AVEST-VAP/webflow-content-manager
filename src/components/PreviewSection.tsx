@@ -100,7 +100,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
               color: '#854d0e',
             }}>
               <strong style={{ display: 'block', marginBottom: '8px' }}>
-                Clés du JSON absentes des pages :
+                Clés du fichier importé non trouvées sur le site :
               </strong>
               {previewData.summary.unusedKeys.slice(0, MAX_DISPLAYED_WARNINGS).map((key: string, i: number) => (
                 <div key={i} style={{ marginBottom: '4px' }}>* {key}</div>
@@ -116,9 +116,12 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
           {/* Page details */}
           <div style={{ maxHeight: '300px', overflow: 'auto', marginBottom: '16px' }}>
             {previewData.pagesPreviews?.map((pagePreview: PagePreview, idx: number) => (
-              <div key={idx} className="card" style={{ padding: '12px', marginBottom: '12px' }}>
-                <div className="flex-between">
-                  <strong className="text-sm">{pagePreview.pageName}</strong>
+              <details key={idx} className="card" style={{ padding: '12px', marginBottom: '12px' }}>
+                <summary style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', listStyle: 'none' }}>
+                  <strong className="text-sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="chevron">▶</span>
+                    {pagePreview.pageName}
+                  </strong>
                   <div>
                     <span className="badge badge-success" style={{ marginRight: '4px' }}>
                       {pagePreview.stats.withValue}
@@ -129,8 +132,50 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
                       </span>
                     ) : null}
                   </div>
+                </summary>
+
+                <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                  {pagePreview.changes.map((change: Change, cIdx: number) => (
+                    <div key={cIdx} style={{ marginBottom: '12px', fontSize: '13px' }}>
+                      <div className="flex-between" style={{ marginBottom: '4px' }}>
+                        <code className="text-sm" style={{ color: 'var(--primary)', background: '#f0fdf4', padding: '2px 6px', borderRadius: '4px' }}>
+                          {change.key}
+                        </code>
+                        {change.hasValue ? (
+                          <span className="badge badge-success" style={{ fontSize: '10px' }}>Prêt</span>
+                        ) : (
+                          <span className="badge badge-warning" style={{ fontSize: '10px' }}>Valeur manquante</span>
+                        )}
+                      </div>
+                      {change.newValue ? (
+                        <div className="text-muted" style={{
+                          paddingLeft: '8px',
+                          borderLeft: '2px solid var(--border)',
+                          marginLeft: '2px',
+                          wordBreak: 'break-word'
+                        }}>
+                          {change.newValue}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+
+                  {pagePreview.missingKeys.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <div className="text-sm text-muted mb-2" style={{ color: 'var(--warning-text)' }}>
+                        Éléments détectés sur la page mais absents du fichier importé :
+                      </div>
+                      {pagePreview.missingKeys.map((key: string, mIdx: number) => (
+                        <div key={mIdx} style={{ marginBottom: '4px' }}>
+                          <code className="text-sm" style={{ color: 'var(--warning-text)', background: 'var(--warning-bg)', padding: '2px 6px', borderRadius: '4px' }}>
+                            {key}
+                          </code>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
+              </details>
             ))}
           </div>
         </>

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { SiteDeployer } from './services/deployer';
+import { ContentManager } from './services/deployer';
 import { useSiteInfo } from './hooks/useSiteInfo';
 import { useAppState } from './hooks/useAppState';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -9,7 +9,7 @@ import { ProgressSection } from './components/ProgressSection';
 import { ResultSection } from './components/ResultSection';
 import './styles.css';
 
-const deployer = new SiteDeployer();
+const deployer = new ContentManager();
 
 /**
  * Main application component

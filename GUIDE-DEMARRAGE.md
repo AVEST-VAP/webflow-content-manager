@@ -1,4 +1,4 @@
-# 🚀 Guide de Démarrage Rapide - Site Deployer
+# Webflow Content Manager - Guide de Démarrage Rapide - Site Deployer
 
 ## Prochaines Étapes
 
@@ -190,8 +190,35 @@ npm run lint
 - ✅ Utilisez l'URL complète (avec http://)
 - ✅ Désactivez les bloqueurs de pub si nécessaire
 
+#### 🔗 Gérer les Liens (Nouveauté)
+
+Vous pouvez modifier la destination d'un bouton ou d'un lien.
+
+**Dans votre tableau (CSV) :**
+| Key | Data |
+|-----|------|
+| `home.cta` | `Voir le prix` (Texte du bouton) |
+| `home.cta_link` | `https://exemple.com` (Lien) |
+| `home.page_interne` | `Nos Agences` (Lien vers page interne) |
+
+**Dans Webflow :**
+1.  Sélectionnez l'élément (Link Block ou Button).
+2.  Ajoutez `data-wording-key="home.cta_link"`.
+3.  Ajoutez `data-wording-mode="link"`.
+
+> **Note :** Si vous mettez une URL (`https://...`), ça crée un lien externe. Si vous mettez un nom de page (ex: `Nos Agences`), ça crée un lien interne intelligent.
+
+#### 🧩 Gérer les Composants (Avancé)
+
+Si vous utilisez des composants avec des propriétés (ex: "Text", "Link") :
+
+**Dans Webflow :**
+1.  Sélectionnez l'instance du composant.
+2.  Ajoutez `data-wording-key="home.mon_composant"`.
+3.  Ajoutez `data-wording-mode="prop:LeNomDeLaPropriete"` (ex: `prop:Text`).
+
 ### Les éléments ne sont pas trouvés
-- ✅ Vérifiez l'orthographe de `data-wording-key`
+- ✅ Vérifiez l'orthographie de `data-wording-key`
 - ✅ Assurez-vous d'être sur la bonne page
 - ✅ Les clés sont case-sensitive !
 

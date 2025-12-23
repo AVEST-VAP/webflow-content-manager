@@ -1,5 +1,5 @@
 {
-  "name": "site-deployer",
+  "name": "webflow-content-manager",
   "version": "1.0.0",
   "scripts": {
     "dev": "npm install && concurrently \"webflow extension serve\" \"npm run watch-webpack\"",

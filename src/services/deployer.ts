@@ -10,7 +10,7 @@ const isPage = (item: PageOrFolder): boolean => item.type === 'Page';
 /**
  * Classe principale pour gérer le déploiement de wording sur une page Webflow
  */
-export class SiteDeployer {
+export class ContentManager {
   private wordingData: WordingData | null = null;
 
   /**
@@ -197,14 +197,58 @@ export class SiteDeployer {
 
           if (mode === 'text' || !mode) {
             // Mode texte par défaut
-            if (foundElement.textContent === true) {
-              // Pour récupérer l'ancienne valeur, on pourrait utiliser une méthode getTextContent si elle existe
-              // Pour l'instant on la laisse vide
-              oldValue = '';
-              await foundElement.setTextContent(newValue);
-            } else {
+            try {
+              // Tentative 1 : setTextContent standard sur l'élément lui-même
+              if (foundElement.textContent === true || ('setTextContent' in foundElement && typeof (foundElement as any).setTextContent === 'function')) {
+                oldValue = '';
+                await (foundElement as any).setTextContent(newValue);
+              }
+              // Tentative 2 : Fallback sur setProperties (éléments hybrides/composants)
+              else if ('setProperties' in foundElement) {
+                await (foundElement as any).setProperties({ text: newValue });
+              }
+              // Tentative 3 : Vérifier les enfants (Si c'est un Block qui contient du texte)
+              else if ('getChildren' in foundElement && typeof (foundElement as any).getChildren === 'function') {
+                const children = (foundElement as any).getChildren();
+                if (children && children.length > 0) {
+                  const firstChild = children[0];
+                  if (firstChild.textContent === true || ('setTextContent' in firstChild && typeof firstChild.setTextContent === 'function')) {
+                    await firstChild.setTextContent(newValue);
+                    // Succès sur l'enfant !
+                  } else {
+                    throw new Error(`L'enfant de l'élément (Type: ${firstChild.type}) ne supporte pas le texte non plus.`);
+                  }
+                } else {
+                  throw new Error(`L'élément est un Block vide (pas d'enfants sur lesquels écrire).`);
+                }
+              }
+              else {
+                throw new Error(`Pas de méthode compatible pour le texte (Type: ${(foundElement as any).type})`);
+              }
+
+              // Succès - on enregistre le changement
+              changes.push({
+                key: elementInfo.key,
+                old_value: oldValue,
+                new_value: newValue,
+                element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                status: 'success'
+              });
+              applied++;
+
+            } catch (err: any) {
+              console.log('Text update error:', err);
               failed++;
-              errors.push(`Impossible de définir le texte pour "${elementInfo.key}"`);
+              const msg = `Impossible de définir le texte pour "${elementInfo.key}": ${err.message}`;
+              errors.push(msg);
+              changes.push({
+                key: elementInfo.key,
+                old_value: '',
+                new_value: newValue,
+                element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                status: 'error',
+                message: msg
+              });
               continue;
             }
           } else if (mode === 'html') {
@@ -216,6 +260,114 @@ export class SiteDeployer {
               oldValue = '';
               await foundElement.setTextContent(newValue);
             }
+          } else if (mode === 'link') {
+            // Mode lien (href) auto-détecté
+            if ('setSettings' in foundElement && typeof (foundElement as any).setSettings === 'function') {
+
+              // PRIORITÉ 1 : Si c'est une URL absolue (http/https), on force le mode URL
+              const isAbsoluteUrl = /^https?:\/\//i.test(newValue);
+
+              if (isAbsoluteUrl) {
+                await (foundElement as any).setSettings('url', newValue);
+              } else {
+                // PRIORITÉ 2 : Recherche de page interne
+                const pagesAndFolders = await webflow.getAllPagesAndFolders();
+                let targetPage = null;
+
+                if (pagesAndFolders) {
+                  for (const item of pagesAndFolders) {
+                    if (item.type === 'Page') {
+                      const name = await item.getName();
+                      // const slug = await item.getSlug(); // getSlug n'est pas toujours dispo/fiable selon contexte
+
+                      if (name.toLowerCase() === newValue.toLowerCase()) {
+                        targetPage = item;
+                        break;
+                      }
+                    }
+                  }
+                }
+
+                if (targetPage) {
+                  // Lien interne vers une page
+                  await (foundElement as any).setSettings('page', targetPage);
+                } else {
+                  // Fallback : On considère que c'est une URL relative ou autre
+                  await (foundElement as any).setSettings('url', newValue);
+                }
+
+                changes.push({
+                  key: elementInfo.key,
+                  old_value: oldValue,
+                  new_value: newValue,
+                  element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                  status: 'success'
+                });
+                applied++;
+
+              }
+            } else {
+              failed++;
+              const msg = `L'élément "${elementInfo.key}" ne supporte pas les liens (pas de méthode setSettings)`;
+              errors.push(msg);
+              changes.push({
+                key: elementInfo.key,
+                old_value: '',
+                new_value: newValue,
+                element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                status: 'error',
+                message: msg
+              });
+              continue;
+            }
+
+          } else if (mode.startsWith('prop:')) {
+            // Mode propriété de composant (ex: prop:Text, prop:Link)
+            const propName = mode.replace('prop:', '').trim();
+
+            if ('setProperties' in foundElement && typeof (foundElement as any).setProperties === 'function') {
+              try {
+                // On tente de définir la propriété directement
+                await (foundElement as any).setProperties({ [propName]: newValue });
+
+                changes.push({
+                  key: elementInfo.key,
+                  old_value: '', // Pas facile de récupérer l'ancienne valeur ici
+                  new_value: newValue,
+                  element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                  status: 'success'
+                });
+                applied++;
+
+              } catch (err: any) {
+                failed++;
+                const msg = `Erreur maj propriété "${propName}" sur "${elementInfo.key}": ${err.message}`;
+                errors.push(msg);
+                changes.push({
+                  key: elementInfo.key,
+                  old_value: '',
+                  new_value: newValue,
+                  element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                  status: 'error',
+                  message: msg
+                });
+                continue;
+              }
+            } else {
+              failed++;
+              const msg = `L'élément "${elementInfo.key}" n'est pas une instance de composant (pas de méthode setProperties)`;
+              errors.push(msg);
+              changes.push({
+                key: elementInfo.key,
+                old_value: '',
+                new_value: newValue,
+                element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                status: 'error',
+                message: msg
+              });
+              continue;
+            }
+
           } else if (mode.startsWith('attr:')) {
             // Mode attribut (href, src, alt, etc.)
             const attrName = mode.replace('attr:', '');
@@ -478,10 +630,10 @@ export class SiteDeployer {
     // Correspondance exacte
     if (normalized === target) return true;
 
-    // Correspondance avec tirets/espaces
-    // Ex: "notre-histoire" ou "notre histoire" match avec "notrehistoire"
-    const withoutSpaces = normalized.replace(/[\s-]/g, '');
-    const targetWithoutSpaces = target.replace(/[\s-]/g, '');
+    // Correspondance avec tirets/espaces/underscores
+    // Ex: "notre-histoire", "notre_histoire" ou "notre histoire" match avec "notrehistoire"
+    const withoutSpaces = normalized.replace(/[\s-_]/g, '');
+    const targetWithoutSpaces = target.replace(/[\s-_]/g, '');
     if (withoutSpaces === targetWithoutSpaces) return true;
 
     return false;

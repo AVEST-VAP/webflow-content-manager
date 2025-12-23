@@ -370,6 +370,87 @@ body {
   margin-top: 16px;
 }
 
-.mb-4 {
-  margin-bottom: 16px;
+
+/* Chevron Animation */
+.chevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+details[open] .chevron {
+  transform: rotate(90deg);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.tab-item {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.tab-item:hover {
+  color: var(--text-main);
+}
+
+.tab-item.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Dropzone */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 40px 24px;
+  text-align: center;
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.dropzone:hover,
+.dropzone.dragging {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.dropzone.success {
+  border-color: var(--success);
+  background: rgba(30, 215, 96, 0.05);
+  /* Very light green */
+}
+
+.dropzone-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.dropzone-text {
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.dropzone-hint {
+  font-size: 12px;
+  color: var(--text-muted);
 }

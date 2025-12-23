@@ -1,11 +1,11 @@
 import React from 'react';
 import { DeploymentReport } from '../types';
 import { MAX_DISPLAYED_WARNINGS } from '../utils/constants';
-import { SiteDeployer } from '../services/deployer';
+import { ContentManager } from '../services/deployer';
 
 interface ResultSectionProps {
   report: DeploymentReport;
-  deployer: SiteDeployer;
+  deployer: ContentManager;
   onBack: () => void;
 }
 
@@ -63,61 +63,82 @@ export const ResultSection: React.FC<ResultSectionProps> = ({
       {isMultiPage && report.multiPageReports ? (
         <>
           <h3 className="text-sm mb-4" style={{ fontWeight: '600' }}>Résultats par page</h3>
-          <div style={{ maxHeight: '300px', overflow: 'auto', marginBottom: '16px' }}>
-            {report.multiPageReports.map((pageReport: DeploymentReport, idx: number) => (
-              <div key={idx} className="card" style={{ padding: '12px', marginBottom: '12px' }}>
-                <div className="flex-between mb-4">
-                  <strong className="text-sm">{pageReport.page_name}</strong>
-                  <div>
-                    <span className="badge badge-success" style={{ marginRight: '4px' }}>
-                      {pageReport.stats.applied}
-                    </span>
-                    {pageReport.stats.failed > 0 ? (
-                      <span className="badge badge-error">{pageReport.stats.failed}</span>
+          <div style={{ maxHeight: '400px', overflow: 'auto', marginBottom: '16px' }}>
+            {report.multiPageReports.map((pageReport: DeploymentReport, idx: number) => {
+              const pageHasErrors = pageReport.stats.failed > 0;
+              return (
+                <details key={idx} className="card" style={{ padding: '0', marginBottom: '12px', overflow: 'hidden' }} open={pageHasErrors}>
+                  <summary style={{ padding: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: pageHasErrors ? '#fff1f2' : 'transparent', listStyle: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="chevron">▶</span>
+                      <strong className="text-sm">{pageReport.page_name}</strong>
+                    </div>
+                    <div>
+                      <span className="badge badge-success" style={{ marginRight: '4px' }}>
+                        {pageReport.stats.applied}
+                      </span>
+                      {pageReport.stats.failed > 0 ? (
+                        <span className="badge badge-error">{pageReport.stats.failed}</span>
+                      ) : null}
+                    </div>
+                  </summary>
+
+                  <div style={{ padding: '12px', borderTop: '1px solid var(--border)', backgroundColor: '#fafafa' }}>
+                    {pageReport.changes && pageReport.changes.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {pageReport.changes.map((change, cIdx) => (
+                          <div key={cIdx} style={{
+                            fontSize: '12px',
+                            padding: '8px',
+                            borderRadius: '4px',
+                            background: '#fff',
+                            borderLeft: `3px solid ${change.status === 'error' ? 'var(--error)' : 'var(--success)'}`,
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: change.status === 'error' ? '4px' : '0' }}>
+                              <code style={{ fontSize: '11px', background: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>
+                                {change.key}
+                              </code>
+                              <span className={change.status === 'error' ? 'text-error' : 'text-success'} style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                {change.status === 'success' ? 'OK' : 'ERREUR'}
+                              </span>
+                            </div>
+                            {change.status === 'error' && change.message ? (
+                              <div style={{ color: 'var(--error)', fontSize: '11px', marginTop: '4px' }}>
+                                {change.message}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-muted text-sm" style={{ fontStyle: 'italic' }}>Aucun changement sur cette page.</div>
+                    )}
+
+                    {/* Show page-specific missing keys if any (could check warnings) */}
+                    {pageReport.warnings.length > 0 ? (
+                      <div style={{ marginTop: '12px' }}>
+                        <div className="text-warning" style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' }}>Avertissements :</div>
+                        {pageReport.warnings.map((w, wIdx) => (
+                          <div key={wIdx} className="text-muted" style={{ fontSize: '11px' }}>* {w}</div>
+                        ))}
+                      </div>
                     ) : null}
                   </div>
-                </div>
-              </div>
-            ))}
+                </details>
+              );
+            })}
           </div>
         </>
       ) : null}
 
-      {/* Errors */}
-      {hasErrors ? (
+      {/* Global Errors (only show if not covered by page reports, or as summary) */}
+      {hasErrors && (!report.multiPageReports || report.multiPageReports.length === 0) ? (
         <div className="error-box mb-4">
           <strong style={{ display: 'block', marginBottom: '8px' }}>Erreurs :</strong>
           {report.errors.slice(0, MAX_DISPLAYED_WARNINGS).map((err, i) => (
             <div key={i} style={{ marginBottom: '4px' }}>* {err}</div>
           ))}
-          {report.errors.length > MAX_DISPLAYED_WARNINGS ? (
-            <div style={{ marginTop: '8px', opacity: 0.8 }}>
-              ... et {report.errors.length - MAX_DISPLAYED_WARNINGS} autres
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Warnings */}
-      {hasWarnings ? (
-        <div style={{
-          padding: '12px',
-          background: '#fefce8',
-          borderRadius: '6px',
-          border: '1px solid #fef08a',
-          marginBottom: '16px',
-          fontSize: '12px',
-          color: '#854d0e',
-        }}>
-          <strong style={{ display: 'block', marginBottom: '8px' }}>Avertissements :</strong>
-          {report.warnings.slice(0, MAX_DISPLAYED_WARNINGS).map((warn, i) => (
-            <div key={i} style={{ marginBottom: '4px' }}>* {warn}</div>
-          ))}
-          {report.warnings.length > MAX_DISPLAYED_WARNINGS ? (
-            <div style={{ marginTop: '8px', opacity: 0.8 }}>
-              ... et {report.warnings.length - MAX_DISPLAYED_WARNINGS} autres
-            </div>
-          ) : null}
         </div>
       ) : null}
 

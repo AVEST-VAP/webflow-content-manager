@@ -1,4 +1,4 @@
-# Site Deployer - Extension Webflow
+# Webflow Content Manager - Extension Webflow
 
 Extension Webflow Designer pour déployer rapidement du wording sur vos sites à partir d'un fichier JSON.
 
