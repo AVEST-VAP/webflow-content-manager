@@ -214,6 +214,21 @@ Vous pouvez modifier la destination d'un bouton ou d'un lien.
 
 > **Note :** Si vous mettez une URL (`https://...`), ça crée un lien externe. Si vous mettez un nom de page (ex: `Nos Agences`), ça crée un lien interne intelligent.
 
+#### 📝 Gérer les Placeholders de Formulaire
+
+Vous pouvez modifier le placeholder des champs de formulaire.
+
+**Dans votre tableau (CSV) :**
+| Key | Data |
+|-----|------|
+| `contact.email` | `Votre email...` |
+| `contact.message` | `Votre message...` |
+
+**Dans Webflow :**
+1. Sélectionnez l'input de formulaire.
+2. Ajoutez `data-wording-key="contact.email"`.
+3. Ajoutez `data-wording-mode="placeholder"`.
+
 #### 🧩 Gérer les Composants (Avancé)
 
 Si vous utilisez des composants avec des propriétés (ex: "Text", "Link") :

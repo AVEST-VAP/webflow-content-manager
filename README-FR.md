@@ -67,6 +67,32 @@ sell.benefits.item_1.title
 estimate.form.submit
 ```
 
+### Modes disponibles (`data-wording-mode`)
+
+| Mode | Usage | Exemple |
+|------|-------|---------|
+| (aucun) | Texte simple (défaut) | `data-wording-key="home.title"` |
+| `link` | Lien (URL ou page interne) | `data-wording-mode="link"` |
+| `placeholder` | Placeholder d'input | `data-wording-mode="placeholder"` |
+
+**Exemple lien :**
+```html
+<a data-wording-key="home.cta.link" data-wording-mode="link">Lien</a>
+```
+- Valeur URL (`https://...`) → lien externe
+- Valeur nom de page (`Contact`) → lien interne Webflow
+
+**Exemple placeholder :**
+```html
+<input data-wording-key="contact.email" data-wording-mode="placeholder" />
+```
+
+**Structure bouton recommandée :**
+```
+Link Block (data-wording-key="cta.link" data-wording-mode="link")
+  └── Paragraph (data-wording-key="cta.text")
+```
+
 ## 📝 Format du JSON de Wording
 
 ### Structure minimale :
@@ -173,10 +199,12 @@ site-deployer/
 - ✅ Prévisualisation avec rapport d'erreurs détaillé
 - ✅ Application texte, HTML, et images (`src`)
 - ✅ Gestion intelligente des liens (`href`, `page`)
+- ✅ Mise à jour des placeholders de formulaire
 - ✅ Mise à jour des Propriétés de Composants (`prop:Name`)
 - ✅ Dépôt de fichier avec feedback visuel
 - ✅ Détection des clés manquantes/inutilisées
 - ✅ Rapport de déploiement téléchargeable
+- ✅ Badge LOCAL pour le mode développement
 
 ### 🚧 À venir (v2.0)
 - ⏳ Fetch JSON depuis URL

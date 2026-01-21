@@ -321,6 +321,64 @@ export class ContentManager {
               continue;
             }
 
+          } else if (mode === 'placeholder') {
+            // Mode placeholder pour les inputs
+            let placeholderSet = false;
+
+            // Méthode 1: setCustomAttribute (pour FormTextInput)
+            if (!placeholderSet && 'setCustomAttribute' in foundElement && typeof (foundElement as any).setCustomAttribute === 'function') {
+              try {
+                await (foundElement as any).setCustomAttribute('placeholder', newValue);
+                placeholderSet = true;
+              } catch (e) {
+                // setCustomAttribute failed, trying next method
+              }
+            }
+
+            // Méthode 2: setAttribute (pour DOM elements)
+            if (!placeholderSet && 'setAttribute' in foundElement && typeof (foundElement as any).setAttribute === 'function') {
+              try {
+                await (foundElement as any).setAttribute('placeholder', newValue);
+                placeholderSet = true;
+              } catch (e) {
+                // setAttribute failed, trying next method
+              }
+            }
+
+            // Méthode 3: setSettings (fallback)
+            if (!placeholderSet && 'setSettings' in foundElement && typeof (foundElement as any).setSettings === 'function') {
+              try {
+                await (foundElement as any).setSettings('placeholder', newValue);
+                placeholderSet = true;
+              } catch (e) {
+                // setSettings failed
+              }
+            }
+
+            if (placeholderSet) {
+              changes.push({
+                key: elementInfo.key,
+                old_value: oldValue,
+                new_value: newValue,
+                element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                status: 'success'
+              });
+              applied++;
+            } else {
+              failed++;
+              const msg = `L'élément "${elementInfo.key}" ne supporte pas le placeholder (aucune méthode disponible)`;
+              errors.push(msg);
+              changes.push({
+                key: elementInfo.key,
+                old_value: '',
+                new_value: newValue,
+                element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                status: 'error',
+                message: msg
+              });
+              continue;
+            }
+
           } else if (mode.startsWith('prop:')) {
             // Mode propriété de composant (ex: prop:Text, prop:Link)
             const propName = mode.replace('prop:', '').trim();

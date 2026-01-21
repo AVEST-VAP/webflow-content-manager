@@ -11,6 +11,8 @@ import './styles.css';
 
 const deployer = new ContentManager();
 
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
 /**
  * Main application component
  * Orchestrates the different sections based on current step
@@ -122,6 +124,7 @@ const AppContent: React.FC = () => {
             <h1 className="app-title">
               <img src="logo.png" alt="Logo" />
               Webflow Content Manager
+              {isLocalhost ? <span className="badge-local">LOCAL</span> : null}
             </h1>
             <p className="app-subtitle">Chargement...</p>
           </div>
@@ -137,6 +140,7 @@ const AppContent: React.FC = () => {
           <h1 className="app-title">
             <img src="logo.png" alt="Logo" />
             Webflow Content Manager
+            {isLocalhost ? <span className="badge-local">LOCAL</span> : null}
           </h1>
           <p className="app-subtitle">
             Site : <strong>{siteInfo?.siteName}</strong> ({siteInfo?.siteId})

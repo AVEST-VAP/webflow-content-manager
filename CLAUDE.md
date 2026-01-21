@@ -329,6 +329,7 @@ Before release:
 5. **No console.log in production** - Use proper error handling
 6. **No inline styles for layout** - Use CSS classes
 7. **No nested ternaries** - Use early returns or separate conditions
+8. **No AI signatures** - Never add "Co-Authored-By: Claude" or similar in commits/PRs
 
 ---
 
@@ -338,7 +339,35 @@ Before release:
 
 Standard attributes for content targeting:
 - `data-wording-key` - The key matching JSON content
-- `data-wording-mode` - Content type: `text`, `html`, `attr:href`, `attr:src`, `attr:alt`
+- `data-wording-mode` - Content type (optional, defaults to `text`):
+  - `text` - Texte simple (défaut)
+  - `link` - Lien (URL externe ou nom de page Webflow interne)
+  - `placeholder` - Placeholder pour les inputs de formulaire
+
+#### Exemples
+
+**Texte simple (mode par défaut) :**
+```html
+<p data-wording-key="home.hero.title">Mon titre</p>
+```
+
+**Lien :**
+```html
+<a data-wording-key="home.cta.link" data-wording-mode="link">Mon lien</a>
+```
+- Valeur URL (`https://...`) → lien externe
+- Valeur nom de page (`Contact`) → lien interne Webflow
+
+**Placeholder :**
+```html
+<input data-wording-key="contact.email" data-wording-mode="placeholder" />
+```
+
+**Bouton avec lien + texte (structure recommandée) :**
+```
+Link Block (data-wording-key="cta.link" data-wording-mode="link")
+  └── Paragraph (data-wording-key="cta.text")
+```
 
 ### Page Targeting
 
