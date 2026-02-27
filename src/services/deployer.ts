@@ -1,5 +1,5 @@
-import { WordingData, ChangeReport, DeploymentReport } from '../types';
-import { PAGE_LOAD_DELAY_MS, ATTRIBUTES, DEFAULTS } from '../utils/constants';
+import { WordingData, ChangeReport, DeploymentReport, SeoChange } from '../types';
+import { PAGE_LOAD_DELAY_MS, ATTRIBUTES, DEFAULTS, EMAIL_REGEX, PHONE_REGEX, EXTERNAL_URL_REGEX, SEO_KEY_PREFIX, SEO_FIELDS } from '../utils/constants';
 
 // Type for page items from Webflow API
 type PageOrFolder = Awaited<ReturnType<typeof webflow.getAllPagesAndFolders>>[number];
@@ -138,7 +138,7 @@ export class ContentManager {
   /**
    * Applique les changements de wording sur la page
    */
-  async applyChanges(): Promise<DeploymentReport> {
+  async applyChanges(onKeyProgress?: (key: string) => void): Promise<DeploymentReport> {
     if (!this.wordingData) {
       throw new Error('Aucune donnée de wording chargée');
     }
@@ -158,6 +158,7 @@ export class ContentManager {
       const allElements = await webflow.getAllElements();
 
       for (const elementInfo of elements) {
+        onKeyProgress?.(elementInfo.key);
         const newValue = this.wordingData.content[elementInfo.key];
 
         if (newValue === undefined) {
@@ -261,16 +262,28 @@ export class ContentManager {
               await foundElement.setTextContent(newValue);
             }
           } else if (mode === 'link') {
-            // Mode lien (href) auto-détecté
+            // Mode lien auto-détecté : email, téléphone, URL externe, chemin relatif, ou page interne
             if ('setSettings' in foundElement && typeof (foundElement as any).setSettings === 'function') {
 
-              // PRIORITÉ 1 : Si c'est une URL absolue (http/https), on force le mode URL
-              const isAbsoluteUrl = /^https?:\/\//i.test(newValue);
-
-              if (isAbsoluteUrl) {
-                await (foundElement as any).setSettings('url', newValue);
-              } else {
-                // PRIORITÉ 2 : Recherche de page interne
+              // PRIORITÉ 1 : Email
+              if (EMAIL_REGEX.test(newValue)) {
+                await (foundElement as any).setSettings('email', { email: newValue });
+              }
+              // PRIORITÉ 2 : Téléphone
+              else if (PHONE_REGEX.test(newValue)) {
+                const cleanPhone = newValue.replace(/^tel:/, '').trim();
+                await (foundElement as any).setSettings('phone', { phone: cleanPhone });
+              }
+              // PRIORITÉ 3 : URL externe (http/https) → ouvre dans un nouvel onglet
+              else if (EXTERNAL_URL_REGEX.test(newValue)) {
+                await (foundElement as any).setSettings('url', { url: newValue, openInNewTab: true });
+              }
+              // PRIORITÉ 4 : Chemin relatif (commence par /)
+              else if (newValue.startsWith('/')) {
+                await (foundElement as any).setSettings('url', { url: newValue });
+              }
+              // PRIORITÉ 5 : Recherche de page interne par nom
+              else {
                 const pagesAndFolders = await webflow.getAllPagesAndFolders();
                 let targetPage = null;
 
@@ -278,8 +291,6 @@ export class ContentManager {
                   for (const item of pagesAndFolders) {
                     if (item.type === 'Page') {
                       const name = await item.getName();
-                      // const slug = await item.getSlug(); // getSlug n'est pas toujours dispo/fiable selon contexte
-
                       if (name.toLowerCase() === newValue.toLowerCase()) {
                         targetPage = item;
                         break;
@@ -289,23 +300,22 @@ export class ContentManager {
                 }
 
                 if (targetPage) {
-                  // Lien interne vers une page
                   await (foundElement as any).setSettings('page', targetPage);
                 } else {
-                  // Fallback : On considère que c'est une URL relative ou autre
-                  await (foundElement as any).setSettings('url', newValue);
+                  // Fallback : URL relative ou autre
+                  await (foundElement as any).setSettings('url', { url: newValue });
                 }
-
-                changes.push({
-                  key: elementInfo.key,
-                  old_value: oldValue,
-                  new_value: newValue,
-                  element_selector: `[data-wording-key="${elementInfo.key}"]`,
-                  status: 'success'
-                });
-                applied++;
-
               }
+
+              changes.push({
+                key: elementInfo.key,
+                old_value: oldValue,
+                new_value: newValue,
+                element_selector: `[data-wording-key="${elementInfo.key}"]`,
+                status: 'success'
+              });
+              applied++;
+
             } else {
               failed++;
               const msg = `L'élément "${elementInfo.key}" ne supporte pas les liens (pas de méthode setSettings)`;
@@ -484,7 +494,7 @@ export class ContentManager {
    * Scanne toutes les pages ciblées pour prévisualiser les changements
    */
   async scanAllPages(
-    onProgress?: (status: { currentPage: string; completed: number; total: number }) => void
+    onProgress?: (status: { currentPage: string; completed: number; total: number; allPages?: string[] }) => void
   ): Promise<{
     pagesPreviews: Array<{
       pageName: string;
@@ -495,6 +505,7 @@ export class ContentManager {
         withValue: number;
         missing: number;
       };
+      seoKeys?: Array<{ field: string; value: string }>;
     }>;
     summary: {
       totalPages: number;
@@ -517,9 +528,16 @@ export class ContentManager {
         withValue: number;
         missing: number;
       };
+      seoKeys?: Array<{ field: string; value: string }>;
     }> = [];
 
     const globalUnusedKeys = new Set(Object.keys(this.wordingData.content));
+
+    // Remove all SEO keys from unused tracking (they are not elements)
+    const allSeoKeys = this.getAllSeoKeys();
+    for (const seoKey of allSeoKeys) {
+      globalUnusedKeys.delete(seoKey);
+    }
 
     try {
       // Extraire les pages ciblées depuis les clés du JSON
@@ -530,58 +548,38 @@ export class ContentManager {
       const pagesAndFolders = await webflow.getAllPagesAndFolders();
       const allPages = pagesAndFolders?.filter(isPage) ?? [];
 
-      // Filtrer les pages si on a des cibles spécifiques
-      let pagesToProcess = allPages;
-      if (hasTargetPages) {
-        const pagesToProcessTemp: PageOrFolder[] = [];
-
-        for (const page of allPages) {
-          let pageName = '';
+      // Resolve all page names upfront
+      const resolvedPages: Array<{ page: PageOrFolder; name: string }> = [];
+      for (const page of allPages) {
+        let name = '';
+        try {
+          name = await page.getName();
+        } catch {
           try {
-            pageName = await page.getName();
+            name = await page.getSlug();
           } catch {
-            try {
-              pageName = await page.getSlug();
-            } catch {
-              continue;
-            }
-          }
-
-          // Vérifier si cette page correspond à une cible
-          const isTarget = Array.from(targetPages).some(target =>
-            this.isPageMatch(pageName, target)
-          );
-
-          if (isTarget) {
-            pagesToProcessTemp.push(page);
+            continue;
           }
         }
 
-        pagesToProcess = pagesToProcessTemp;
+        if (!hasTargetPages || Array.from(targetPages).some(target => this.isPageMatch(name, target))) {
+          resolvedPages.push({ page, name });
+        }
       }
 
-      // Scanner chaque page
-      for (let i = 0; i < pagesToProcess.length; i++) {
-        const page = pagesToProcess[i];
+      const allPageNames = resolvedPages.map((p) => p.name);
 
-        // Récupérer le nom de la page
-        let pageName = 'Page inconnue';
-        try {
-          pageName = await page.getName();
-        } catch (err) {
-          try {
-            pageName = await page.getSlug();
-          } catch {
-            pageName = 'Page inconnue';
-          }
-        }
+      // Scanner chaque page
+      for (let i = 0; i < resolvedPages.length; i++) {
+        const { page, name: pageName } = resolvedPages[i];
 
         // Notifier la progression
         if (onProgress) {
           onProgress({
             currentPage: pageName,
             completed: i,
-            total: pagesToProcess.length
+            total: resolvedPages.length,
+            allPages: allPageNames,
           });
         }
 
@@ -602,6 +600,9 @@ export class ContentManager {
             }
           });
 
+          // Extract SEO keys for this page
+          const seoEntries = this.extractSeoKeysForPage(pageName);
+
           // Ajouter le résultat
           pagesPreviews.push({
             pageName,
@@ -611,7 +612,8 @@ export class ContentManager {
               total: preview.changes.length,
               withValue: preview.changes.filter(c => c.hasValue).length,
               missing: preview.missingKeys.length
-            }
+            },
+            seoKeys: seoEntries.length > 0 ? seoEntries : undefined,
           });
 
         } catch (error) {
@@ -623,8 +625,9 @@ export class ContentManager {
       if (onProgress) {
         onProgress({
           currentPage: 'Terminé',
-          completed: pagesToProcess.length,
-          total: pagesToProcess.length
+          completed: resolvedPages.length,
+          total: resolvedPages.length,
+          allPages: allPageNames,
         });
       }
 
@@ -701,9 +704,10 @@ export class ContentManager {
    * Déploie le wording sur toutes les pages du site (ou seulement celles ciblées)
    */
   async deployToAllPages(
-    onProgress?: (status: { currentPage: string; completed: number; total: number }) => void
+    onProgress?: (status: { currentPage: string; completed: number; total: number; currentKey?: string; allPages?: string[] }) => void
   ): Promise<{
     reports: DeploymentReport[];
+    seoChanges: SeoChange[];
     summary: {
       totalPages: number;
       successPages: number;
@@ -717,6 +721,7 @@ export class ContentManager {
     }
 
     const reports: DeploymentReport[] = [];
+    const allSeoChanges: SeoChange[] = [];
     let totalApplied = 0;
     let totalFailed = 0;
     let totalMissing = 0;
@@ -731,60 +736,38 @@ export class ContentManager {
       const pagesAndFolders = await webflow.getAllPagesAndFolders();
       const allPages = pagesAndFolders?.filter(isPage) ?? [];
 
-      // Filtrer les pages si on a des cibles spécifiques
-      let pagesToProcess = allPages;
-      if (hasTargetPages) {
-        const pagesToProcessTemp: PageOrFolder[] = [];
-
-        for (const page of allPages) {
-          let pageName = '';
+      // Resolve all page names upfront
+      const resolvedPages: Array<{ page: PageOrFolder; name: string }> = [];
+      for (const page of allPages) {
+        let name = '';
+        try {
+          name = await page.getName();
+        } catch {
           try {
-            pageName = await page.getName();
+            name = await page.getSlug();
           } catch {
-            try {
-              pageName = await page.getSlug();
-            } catch {
-              continue;
-            }
-          }
-
-          // Vérifier si cette page correspond à une cible
-          const isTarget = Array.from(targetPages).some(target =>
-            this.isPageMatch(pageName, target)
-          );
-
-          if (isTarget) {
-            pagesToProcessTemp.push(page);
+            continue;
           }
         }
 
-        pagesToProcess = pagesToProcessTemp;
+        if (!hasTargetPages || Array.from(targetPages).some(target => this.isPageMatch(name, target))) {
+          resolvedPages.push({ page, name });
+        }
       }
 
-      // Déployer sur les pages sélectionnées
-      for (let i = 0; i < pagesToProcess.length; i++) {
-        const page = pagesToProcess[i];
+      const allPageNames = resolvedPages.map((p) => p.name);
 
-        // Récupérer le nom de la page via l'API
-        let pageName = 'Page inconnue';
-        try {
-          // Utiliser getName() pour obtenir le vrai nom de la page
-          pageName = await page.getName();
-        } catch (err) {
-          // Fallback sur le slug si getName échoue
-          try {
-            pageName = await page.getSlug();
-          } catch {
-            pageName = 'Page inconnue';
-          }
-        }
+      // Déployer sur les pages sélectionnées
+      for (let i = 0; i < resolvedPages.length; i++) {
+        const { page, name: pageName } = resolvedPages[i];
 
         // Notifier la progression
         if (onProgress) {
           onProgress({
             currentPage: pageName,
             completed: i,
-            total: pagesToProcess.length
+            total: resolvedPages.length,
+            allPages: allPageNames,
           });
         }
 
@@ -796,8 +779,18 @@ export class ContentManager {
           await new Promise(resolve => setTimeout(resolve, PAGE_LOAD_DELAY_MS));
 
           // Appliquer les changements sur cette page
-          const report = await this.applyChanges();
+          const report = await this.applyChanges((key) => {
+            onProgress?.({ currentPage: pageName, completed: i, total: resolvedPages.length, currentKey: key, allPages: allPageNames });
+          });
           report.page_name = pageName;
+
+          // Apply SEO metadata for this page
+          const seoEntries = this.extractSeoKeysForPage(pageName);
+          if (seoEntries.length > 0) {
+            const seoResults = await this.applySeoToPage(page, seoEntries, pageName);
+            allSeoChanges.push(...seoResults);
+            report.seoChanges = seoResults;
+          }
 
           reports.push(report);
 
@@ -819,15 +812,17 @@ export class ContentManager {
       if (onProgress) {
         onProgress({
           currentPage: 'Terminé',
-          completed: pagesToProcess.length,
-          total: pagesToProcess.length
+          completed: resolvedPages.length,
+          total: resolvedPages.length,
+          allPages: allPageNames,
         });
       }
 
       return {
         reports,
+        seoChanges: allSeoChanges,
         summary: {
-          totalPages: pagesToProcess.length,
+          totalPages: resolvedPages.length,
           successPages,
           totalApplied,
           totalFailed,
@@ -837,6 +832,103 @@ export class ContentManager {
     } catch (error) {
       throw new Error(`Erreur lors du déploiement multi-pages: ${error instanceof Error ? error.message : 'erreur inconnue'}`);
     }
+  }
+
+  /**
+   * Extracts SEO keys from content for a given page name.
+   * Keys follow the convention: pageName._seo.field (e.g. home._seo.title)
+   * @returns Array of { field, value } entries for this page
+   */
+  private extractSeoKeysForPage(pageName: string): Array<{ field: string; value: string }> {
+    if (!this.wordingData) return [];
+
+    const normalizedPage = pageName.toLowerCase().trim();
+    const entries: Array<{ field: string; value: string }> = [];
+
+    for (const [key, value] of Object.entries(this.wordingData.content)) {
+      const parts = key.split('.');
+      // Expected format: pageName._seo.fieldName
+      const seoIdx = parts.indexOf('_seo');
+      if (seoIdx === -1) continue;
+
+      // Page prefix is everything before _seo
+      const pagePrefix = parts.slice(0, seoIdx).join('.').toLowerCase();
+      if (!this.isPageMatch(pageName, pagePrefix)) continue;
+
+      // Field name is everything after _seo
+      const field = parts.slice(seoIdx + 1).join('.');
+      if (field && value) {
+        entries.push({ field, value });
+      }
+    }
+
+    return entries;
+  }
+
+  /**
+   * Returns all content keys that are SEO keys (contain ._seo.)
+   */
+  private getAllSeoKeys(): Set<string> {
+    if (!this.wordingData) return new Set();
+
+    const seoKeys = new Set<string>();
+    for (const key of Object.keys(this.wordingData.content)) {
+      if (key.includes(`${SEO_KEY_PREFIX}`) || key.includes('._seo.')) {
+        seoKeys.add(key);
+      }
+    }
+    return seoKeys;
+  }
+
+  /**
+   * Applies SEO metadata to a Webflow page (title, description)
+   */
+  private async applySeoToPage(
+    page: PageOrFolder,
+    seoEntries: Array<{ field: string; value: string }>,
+    pageName: string
+  ): Promise<SeoChange[]> {
+    const results: SeoChange[] = [];
+
+    for (const entry of seoEntries) {
+      const methodName = SEO_FIELDS[entry.field];
+      if (!methodName) {
+        results.push({
+          pageName,
+          field: entry.field,
+          value: entry.value,
+          status: 'error',
+          message: `Champ SEO "${entry.field}" non supporté`,
+        });
+        continue;
+      }
+
+      try {
+        const pageObj = page as unknown as Record<string, unknown>;
+        if (methodName in page && typeof pageObj[methodName] === 'function') {
+          await (pageObj[methodName] as (val: string) => Promise<void>)(entry.value);
+          results.push({ pageName, field: entry.field, value: entry.value, status: 'success' });
+        } else {
+          results.push({
+            pageName,
+            field: entry.field,
+            value: entry.value,
+            status: 'error',
+            message: `La méthode ${methodName} n'est pas disponible sur cette page`,
+          });
+        }
+      } catch (err) {
+        results.push({
+          pageName,
+          field: entry.field,
+          value: entry.value,
+          status: 'error',
+          message: err instanceof Error ? err.message : 'Erreur inconnue',
+        });
+      }
+    }
+
+    return results;
   }
 
   /**

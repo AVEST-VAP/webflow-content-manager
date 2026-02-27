@@ -20,6 +20,14 @@ export interface ChangeReport {
   message?: string;
 }
 
+export interface SeoChange {
+  pageName: string;
+  field: string;
+  value: string;
+  status: 'success' | 'error';
+  message?: string;
+}
+
 export interface DeploymentReport {
   deployment_id: string;
   site_id: string;
@@ -35,6 +43,7 @@ export interface DeploymentReport {
     missing: number;
   };
   multiPageReports?: DeploymentReport[];
+  seoChanges?: SeoChange[];
 }
 
 export type WordingMode = 'text' | 'html' | 'attr:href' | 'attr:src' | 'attr:alt';

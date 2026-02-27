@@ -1,11 +1,17 @@
 import { useReducer, useCallback } from 'react';
 import { WordingData, DeploymentReport } from '../types';
+import { DuplicateKey } from '../utils/csvParser';
 
 // Types for preview data
 export interface Change {
   key: string;
   hasValue: boolean;
   newValue?: string;
+}
+
+export interface SeoEntry {
+  field: string;
+  value: string;
 }
 
 export interface PagePreview {
@@ -17,6 +23,7 @@ export interface PagePreview {
     withValue: number;
     missing: number;
   };
+  seoKeys?: SeoEntry[];
 }
 
 export interface PreviewSummary {
@@ -35,10 +42,18 @@ export interface PreviewData {
   summary?: PreviewSummary;
 }
 
+export interface SectionGroup {
+  sectionName: string;
+  changes: Change[];
+}
+
 export interface ScanProgress {
   currentPage: string;
   completed: number;
   total: number;
+  mode?: 'scan' | 'deploy';
+  currentKey?: string;
+  allPages?: string[];
 }
 
 // App state
@@ -53,6 +68,7 @@ export interface AppState {
   error: string;
   loading: boolean;
   scanProgress: ScanProgress | null;
+  duplicateKeys: DuplicateKey[];
 }
 
 // Actions
@@ -65,11 +81,13 @@ type AppAction =
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_SCAN_PROGRESS'; payload: ScanProgress | null }
-  | { type: 'LOAD_JSON_SUCCESS'; payload: { wordingData: WordingData; jsonInput: string } }
+  | { type: 'SET_DUPLICATE_KEYS'; payload: DuplicateKey[] }
+  | { type: 'LOAD_JSON_SUCCESS'; payload: { wordingData: WordingData; jsonInput: string; duplicateKeys?: DuplicateKey[] } }
   | { type: 'START_SCAN' }
   | { type: 'SCAN_COMPLETE'; payload: PreviewData }
   | { type: 'DEPLOY_COMPLETE'; payload: DeploymentReport }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'CLOSE' };
 
 const initialState: AppState = {
   step: 'input',
@@ -80,6 +98,7 @@ const initialState: AppState = {
   error: '',
   loading: false,
   scanProgress: null,
+  duplicateKeys: [],
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -100,11 +119,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, loading: action.payload };
     case 'SET_SCAN_PROGRESS':
       return { ...state, scanProgress: action.payload };
+    case 'SET_DUPLICATE_KEYS':
+      return { ...state, duplicateKeys: action.payload };
     case 'LOAD_JSON_SUCCESS':
       return {
         ...state,
         wordingData: action.payload.wordingData,
         jsonInput: action.payload.jsonInput,
+        duplicateKeys: action.payload.duplicateKeys ?? [],
         error: '',
       };
     case 'START_SCAN':
@@ -134,7 +156,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...initialState,
         jsonInput: state.jsonInput,
         wordingData: state.wordingData,
+        duplicateKeys: [],
       };
+    case 'CLOSE':
+      return { ...initialState };
     default:
       return state;
   }
@@ -157,12 +182,14 @@ export const useAppState = () => {
     setError: useCallback((error: string) => dispatch({ type: 'SET_ERROR', payload: error }), []),
     setLoading: useCallback((loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading }), []),
     setScanProgress: useCallback((progress: ScanProgress | null) => dispatch({ type: 'SET_SCAN_PROGRESS', payload: progress }), []),
-    loadJsonSuccess: useCallback((wordingData: WordingData, jsonInput: string) =>
-      dispatch({ type: 'LOAD_JSON_SUCCESS', payload: { wordingData, jsonInput } }), []),
+    setDuplicateKeys: useCallback((keys: DuplicateKey[]) => dispatch({ type: 'SET_DUPLICATE_KEYS', payload: keys }), []),
+    loadJsonSuccess: useCallback((wordingData: WordingData, jsonInput: string, duplicateKeys?: DuplicateKey[]) =>
+      dispatch({ type: 'LOAD_JSON_SUCCESS', payload: { wordingData, jsonInput, duplicateKeys } }), []),
     startScan: useCallback(() => dispatch({ type: 'START_SCAN' }), []),
     scanComplete: useCallback((data: PreviewData) => dispatch({ type: 'SCAN_COMPLETE', payload: data }), []),
     deployComplete: useCallback((report: DeploymentReport) => dispatch({ type: 'DEPLOY_COMPLETE', payload: report }), []),
     reset: useCallback(() => dispatch({ type: 'RESET' }), []),
+    close: useCallback(() => dispatch({ type: 'CLOSE' }), []),
   };
 
   return { state, actions };

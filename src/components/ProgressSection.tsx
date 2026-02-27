@@ -5,44 +5,113 @@ interface ProgressSectionProps {
   scanProgress: ScanProgress;
 }
 
+type PageStatus = 'pending' | 'active' | 'completed';
+
 /**
- * Progress section showing scan progress
+ * Progress section showing scan/deploy progress with animated bar and full page list
  */
 export const ProgressSection: React.FC<ProgressSectionProps> = ({ scanProgress }) => {
   const percentage = scanProgress.total > 0
     ? Math.round((scanProgress.completed / scanProgress.total) * 100)
     : 0;
 
+  const isDeploy = scanProgress.mode === 'deploy';
+  const title = isDeploy ? 'Déploiement en cours...' : 'Scan en cours...';
+  const initLabel = isDeploy ? 'Préparation du déploiement...' : 'Recherche des pages...';
+
+  // Build page statuses from allPages + completed count + currentPage
+  const pageStatuses: Array<{ name: string; status: PageStatus }> = (scanProgress.allPages ?? []).map((name) => {
+    const currentIdx = scanProgress.allPages?.indexOf(scanProgress.currentPage) ?? -1;
+    const pageIdx = scanProgress.allPages?.indexOf(name) ?? -1;
+
+    let status: PageStatus = 'pending';
+    if (pageIdx < currentIdx || scanProgress.currentPage === 'Terminé') {
+      status = 'completed';
+    } else if (pageIdx === currentIdx) {
+      status = 'active';
+    }
+
+    return { name, status };
+  });
+
+  const isInitializing = !scanProgress.allPages || scanProgress.allPages.length === 0;
+
   return (
     <div className="section">
-      <h2 className="section-title">Scan en cours...</h2>
+      <h2 className="section-title">{title}</h2>
 
       <div className="card">
-        <div className="mb-4">
-          <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+        <div className="scan-header">
+          <span className="scan-current-page">
             {scanProgress.currentPage}
+          </span>
+          <span className="scan-percentage">
+            {percentage}%
+          </span>
+        </div>
+
+        {/* Current key indicator during deploy */}
+        {isDeploy && scanProgress.currentKey ? (
+          <div className="scan-current-key">
+            <code>{scanProgress.currentKey}</code>
           </div>
-          <div style={{
-            height: '8px',
-            background: '#e5e7eb',
-            borderRadius: '4px',
-            overflow: 'hidden',
-          }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${percentage}%`,
-                background: 'var(--primary)',
-                borderRadius: '4px',
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </div>
-          <div className="text-sm text-muted mt-2">
-            {scanProgress.completed} / {scanProgress.total} pages
-          </div>
+        ) : null}
+
+        <div className="progress-container">
+          <div
+            className="progress-bar"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+
+        <div className="scan-counter">
+          {scanProgress.completed} / {scanProgress.total} pages
         </div>
       </div>
+
+      {/* Loading dots while resolving pages */}
+      {isInitializing ? (
+        <div className="card" style={{ textAlign: 'center', padding: '24px' }}>
+          <div className="pulse-dots">
+            <span className="pulse-dot" />
+            <span className="pulse-dot" />
+            <span className="pulse-dot" />
+          </div>
+          <div className="scan-counter" style={{ marginTop: '12px' }}>
+            {initLabel}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Full page list with 3 states */}
+      {pageStatuses.length > 0 ? (
+        <div className="card scan-pages-list">
+          {pageStatuses.map((page, idx) => (
+            <div
+              key={idx}
+              className={`scan-step ${page.status}`}
+            >
+              <span className="scan-step-icon">
+                {page.status === 'active' ? (
+                  <svg className="scan-spinner" width="14" height="14" viewBox="0 0 14 14">
+                    <circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="20 14" strokeLinecap="round" />
+                  </svg>
+                ) : page.status === 'completed' ? (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="6" fill="var(--success-subtle)" stroke="var(--success)" strokeWidth="1" />
+                    <path d="M4.5 7L6.5 9L9.5 5.5" stroke="var(--success)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="6" fill="none" stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="3 2" />
+                  </svg>
+                )}
+              </span>
+              <span className="scan-step-name">{page.name}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 };

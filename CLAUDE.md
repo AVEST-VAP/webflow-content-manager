@@ -341,7 +341,7 @@ Standard attributes for content targeting:
 - `data-wording-key` - The key matching JSON content
 - `data-wording-mode` - Content type (optional, defaults to `text`):
   - `text` - Texte simple (défaut)
-  - `link` - Lien (URL externe ou nom de page Webflow interne)
+  - `link` - Lien (auto-détection : email, téléphone, URL externe, page interne)
   - `placeholder` - Placeholder pour les inputs de formulaire
 
 #### Exemples
@@ -351,12 +351,15 @@ Standard attributes for content targeting:
 <p data-wording-key="home.hero.title">Mon titre</p>
 ```
 
-**Lien :**
+**Lien (auto-détection) :**
 ```html
 <a data-wording-key="home.cta.link" data-wording-mode="link">Mon lien</a>
 ```
-- Valeur URL (`https://...`) → lien externe
-- Valeur nom de page (`Contact`) → lien interne Webflow
+- Email (`contact@trybe.fr`) → lien mailto
+- Téléphone (`+33 6 12 34 56 78`) → lien tel
+- URL externe (`https://...`) → lien externe (nouvel onglet automatique)
+- Chemin relatif (`/page`) → lien relatif
+- Nom de page (`Contact`) → lien interne Webflow
 
 **Placeholder :**
 ```html
@@ -369,17 +372,119 @@ Link Block (data-wording-key="cta.link" data-wording-mode="link")
   └── Paragraph (data-wording-key="cta.text")
 ```
 
+### SEO Metadata
+
+Keys with `_seo.` prefix set page metadata via the Webflow API :
+- `home._seo.title` → `page.setTitle("...")`
+- `home._seo.description` → `page.setDescription("...")`
+
+These keys are handled automatically during scan/deploy and don't appear as "unused keys".
+
 ### Page Targeting
 
 Keys with dot notation target specific pages:
-- `home.hero.title` → targets "Home" page
-- `about.team.description` → targets "About" page
+- `home.hero.title` → targets "Home" page, section "hero"
+- `about.team.description` → targets "About" page, section "team"
+- `home._seo.title` → targets "Home" page SEO metadata
 
 ### API Rate Limiting
 
 - Add delay between page switches (500ms minimum)
 - Don't scan more than 50 pages at once
 - Handle API errors gracefully
+
+---
+
+## Clean Code Principles
+
+Every piece of code must follow DRY, Separation of Concerns, and clean code practices.
+
+### DRY (Don't Repeat Yourself)
+
+- Never duplicate logic. If code appears more than once, extract it into a shared utility, hook, or component.
+- Before creating anything new, verify it doesn't already exist in `hooks/`, `utils/`, `services/`, or `components/`.
+- Centralize constants, enums, and type definitions — never scatter them across files.
+
+### Separation of Concerns
+
+- Each file, function, and component must have a single, clear responsibility.
+- Keep business logic out of components — move it into hooks, stores, or utility functions.
+- UI rendering, state management, and side effects must live in separate layers.
+
+### Clean Code
+
+- Functions and variables must have descriptive, intention-revealing names.
+- Functions should be short and do one thing.
+- Prefer early returns over deeply nested conditionals.
+- No dead code, no commented-out code, no unused imports.
+- Fix root causes, not symptoms. Never layer workarounds.
+
+---
+
+## Claude Code Specific Rules
+
+### Commits
+
+- **Never** add "Co-Authored-By: Claude" or similar AI signatures in commits.
+- Atomic commits with single-line messages.
+- Format: `type(scope): description` (e.g., `feat(seo): add page metadata support`).
+- Common types: `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `test`.
+
+### Branches
+
+- Format: `{user}/{short-description}` (e.g., `fawsy/duplicate-key-detection`).
+- Short description must give enough context without looking up a ticket.
+- Use dashes `-` to separate words.
+
+### Pull Requests
+
+- **Never** add footers like "Generated with Claude Code".
+- Required structure: `## Quoi` / `## Changements` / `## Tests` / `## Notes`.
+
+### MCP (Model Context Protocol)
+
+#### GitHub MCP
+
+- **Always** use MCP GitHub tools instead of `gh` CLI for GitHub operations when available.
+- Check PR status, comments, and checks directly via MCP.
+
+### Claude Code Tools
+
+| Need          | Use        | Avoid                          |
+| ------------- | ---------- | ------------------------------ |
+| Read a file   | `Read`     | `cat`, `head`, `tail` via Bash |
+| Search code   | `Grep`     | `grep`, `rg` via Bash          |
+| Find files    | `Glob`     | `find`, `ls` via Bash          |
+| Edit a file   | `Edit`     | `sed`, `awk` via Bash          |
+| Create a file | `Write`    | `echo >`, `cat <<EOF` via Bash |
+| GitHub info   | MCP GitHub | `gh` CLI via Bash              |
+
+Bash is reserved for: git commands, npm commands, and system commands requiring shell execution.
+
+### Checklists
+
+#### Before each commit
+
+- [ ] No `any` types
+- [ ] Named exports only (no `default export`)
+- [ ] No floating promises
+- [ ] No magic numbers — use named constants
+- [ ] `npm run build` passes without errors
+- [ ] No AI signatures in commit message
+
+#### Before each PR
+
+- [ ] PR template followed
+- [ ] No "Generated with Claude Code" footer
+- [ ] Modified files reviewed
+- [ ] TypeScript checks pass
+- [ ] CHANGELOG.md updated
+
+---
+
+## Changelog
+
+All changes must be documented in `CHANGELOG.md` at the root of the repository. See the file for format and conventions.
 
 ---
 
