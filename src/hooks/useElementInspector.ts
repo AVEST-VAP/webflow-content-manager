@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { WordingContent } from '../types';
-import { ATTRIBUTES, DEFAULTS } from '../utils/constants';
+import { useState, useEffect, useCallback } from "react";
+import { WordingContent } from "../types";
+import { ATTRIBUTES, DEFAULTS } from "../utils/constants";
 
 export interface InspectedElement {
   key: string;
@@ -19,7 +19,17 @@ interface UseElementInspectorReturn {
   elementInfo: InspectedElement | null;
 }
 
-export const useElementInspector = ({ content }: UseElementInspectorOptions): UseElementInspectorReturn => {
+/** Inspected element with no wording key/value (only its Webflow type). */
+const emptyInfo = (elementType: string): InspectedElement => ({
+  key: "",
+  mode: "",
+  value: null,
+  elementType,
+});
+
+export const useElementInspector = ({
+  content,
+}: UseElementInspectorOptions): UseElementInspectorReturn => {
   const [active, setActive] = useState(false);
   const [elementInfo, setElementInfo] = useState<InspectedElement | null>(null);
 
@@ -33,40 +43,51 @@ export const useElementInspector = ({ content }: UseElementInspectorOptions): Us
   useEffect(() => {
     if (!active) return;
 
-    const unsubscribe = webflow.subscribe('selectedelement', async (element) => {
-      if (!element) {
-        setElementInfo(null);
-        return;
-      }
+    let cancelled = false;
 
-      const elType = element.type ?? 'Unknown';
-
-      if (!element.customAttributes) {
-        setElementInfo({ key: '', mode: '', value: null, elementType: elType });
-        return;
-      }
-
-      try {
-        const attrs = await element.getAllCustomAttributes();
-        const keyAttr = attrs.find((a) => a.name === ATTRIBUTES.WORDING_KEY);
-
-        if (!keyAttr) {
-          setElementInfo({ key: '', mode: '', value: null, elementType: elType });
+    const unsubscribe = webflow.subscribe(
+      "selectedelement",
+      async (element) => {
+        if (!element) {
+          setElementInfo(null);
           return;
         }
 
-        const key = keyAttr.value;
-        const modeAttr = attrs.find((a) => a.name === ATTRIBUTES.WORDING_MODE);
-        const mode = modeAttr?.value ?? DEFAULTS.WORDING_MODE;
-        const value = content?.[key] ?? null;
+        const elType = element.type ?? "Unknown";
 
-        setElementInfo({ key, mode, value, elementType: elType });
-      } catch {
-        setElementInfo({ key: '', mode: '', value: null, elementType: elType });
-      }
-    });
+        if (!element.customAttributes) {
+          setElementInfo(emptyInfo(elType));
+          return;
+        }
 
-    return () => unsubscribe();
+        try {
+          const attrs = await element.getAllCustomAttributes();
+          if (cancelled) return; // selection/effect changed during the await
+
+          const keyAttr = attrs?.find((a) => a.name === ATTRIBUTES.WORDING_KEY);
+          if (!keyAttr) {
+            setElementInfo(emptyInfo(elType));
+            return;
+          }
+
+          const key = keyAttr.value;
+          const modeAttr = attrs?.find(
+            (a) => a.name === ATTRIBUTES.WORDING_MODE,
+          );
+          const mode = modeAttr?.value ?? DEFAULTS.WORDING_MODE;
+          const value = content?.[key] ?? null;
+
+          setElementInfo({ key, mode, value, elementType: elType });
+        } catch {
+          if (!cancelled) setElementInfo(emptyInfo(elType));
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [active, content]);
 
   return { active, toggle, elementInfo };

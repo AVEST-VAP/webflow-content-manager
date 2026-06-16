@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════ */
 
 /* ── Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
   /* Surface hierarchy (darkest → lightest) */
@@ -15,11 +15,11 @@
   --bg-active: #2c2c36;
 
   /* Accent — Webflow-inspired blue with subtle purple shift */
-  --accent: #4353FF;
+  --accent: #4353ff;
   --accent-hover: #5b68ff;
   --accent-subtle: rgba(67, 83, 255, 0.12);
   --accent-glow: rgba(67, 83, 255, 0.25);
-  --accent-gradient: linear-gradient(135deg, #4353FF 0%, #7B61FF 100%);
+  --accent-gradient: linear-gradient(135deg, #4353ff 0%, #7b61ff 100%);
 
   /* Text */
   --text-primary: #ededf0;
@@ -132,11 +132,15 @@
 }
 
 [data-theme="light"] .btn-primary {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 [data-theme="light"] .btn-primary:hover:not(:disabled) {
-  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow:
+    var(--shadow-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 [data-theme="light"] .btn-secondary:hover:not(:disabled) {
@@ -189,12 +193,14 @@
   background: var(--bg-active);
   border-radius: 10px;
   position: relative;
-  transition: background var(--duration-fast), border-color var(--duration-fast);
+  transition:
+    background var(--duration-fast),
+    border-color var(--duration-fast);
   border: 1px solid var(--border);
 }
 
 .theme-switch-track::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 14px;
   height: 14px;
@@ -202,7 +208,9 @@
   background: var(--text-secondary);
   top: 2px;
   left: 2px;
-  transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    background var(--duration-fast);
 }
 
 .theme-switch input:checked + .theme-switch-track {
@@ -235,7 +243,13 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   background-color: var(--bg-base);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -245,7 +259,7 @@ body {
 }
 
 code {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
   font-size: 0.85em;
 }
 
@@ -411,6 +425,17 @@ code {
   color: var(--error-text);
 }
 
+.app-error-banner {
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: var(--error-subtle);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--error-text);
+}
+
 .warning-box {
   padding: 14px 16px;
   background: var(--warning-subtle);
@@ -437,8 +462,12 @@ code {
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
+  font-family: inherit;
   color: var(--text-secondary);
   cursor: pointer;
+  border: none;
+  background: transparent;
+  appearance: none;
   border-radius: calc(var(--radius-md) - 3px);
   transition: all var(--duration-fast);
   text-align: center;
@@ -448,6 +477,11 @@ code {
 .tab-item:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
+}
+
+.tab-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .tab-item.active {
@@ -462,7 +496,7 @@ code {
   min-height: 180px;
   padding: 14px 16px;
   font-size: 13px;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   resize: vertical;
@@ -480,7 +514,9 @@ code {
 
 .textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-subtle), 0 0 20px rgba(67, 83, 255, 0.06);
+  box-shadow:
+    0 0 0 3px var(--accent-subtle),
+    0 0 20px rgba(67, 83, 255, 0.06);
 }
 
 .hint {
@@ -493,7 +529,7 @@ code {
   background: rgba(255, 255, 255, 0.06);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   color: var(--accent-hover);
   border: 1px solid var(--border);
@@ -521,12 +557,16 @@ code {
 .btn-primary {
   background: var(--accent);
   color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
-  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow:
+    var(--shadow-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -549,7 +589,7 @@ code {
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  transform: none !important;
+  transform: none;
 }
 
 .btn-link {
@@ -613,6 +653,107 @@ code {
   border-color: rgba(59, 130, 246, 0.2);
 }
 
+.badge-neutral {
+  background: var(--bg-active);
+  color: var(--text-tertiary);
+  border-color: var(--border);
+}
+
+/* ── Pre-flight audit ── */
+.audit-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+
+.audit-ok {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--success-text);
+  background: var(--success-subtle);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.audit-ok-icon {
+  font-weight: 700;
+}
+
+.audit-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+
+.audit-group {
+  margin-bottom: 12px;
+}
+
+.audit-group:last-child {
+  margin-bottom: 0;
+}
+
+.audit-group-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.audit-group-warn .audit-group-title {
+  color: var(--warning-text);
+}
+
+.audit-group-info .audit-group-title {
+  color: var(--info-text);
+}
+
+.audit-group-hint {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.audit-row {
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+.audit-key {
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.audit-key-alt {
+  color: var(--warning-text);
+  background: var(--warning-subtle);
+}
+
+.audit-arrow,
+.audit-meta {
+  color: var(--text-tertiary);
+}
+
+.audit-more {
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
 /* ── Dropzone ── */
 .dropzone {
   border: 1.5px dashed var(--border-strong);
@@ -631,7 +772,7 @@ code {
 }
 
 .dropzone::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -1px;
   border-radius: var(--radius-lg);
@@ -696,7 +837,7 @@ code {
 }
 
 .progress-bar::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
@@ -707,8 +848,12 @@ code {
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-80px); }
-  100% { transform: translateX(80px); }
+  0% {
+    transform: translateX(-80px);
+  }
+  100% {
+    transform: translateX(80px);
+  }
 }
 
 /* ── Chevron & Details ── */
@@ -748,8 +893,13 @@ details summary::-webkit-details-marker {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 @keyframes slideIn {
@@ -862,7 +1012,9 @@ details summary::-webkit-details-marker {
   pointer-events: none;
   opacity: 0;
   transform: translateY(-4px);
-  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
   z-index: 100;
 }
 
@@ -975,8 +1127,12 @@ details summary::-webkit-details-marker {
 }
 
 @keyframes overlayIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalIn {
@@ -994,12 +1150,16 @@ details summary::-webkit-details-marker {
 .btn-danger {
   background: var(--error);
   color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .btn-danger:hover:not(:disabled) {
   background: #dc2626;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 0 20px rgba(239, 68, 68, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -1151,7 +1311,9 @@ details summary::-webkit-details-marker {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes stepSlideIn {
@@ -1190,7 +1352,9 @@ details summary::-webkit-details-marker {
 }
 
 @keyframes pulseDot {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
@@ -1215,7 +1379,9 @@ details summary::-webkit-details-marker {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: color var(--duration-fast), background var(--duration-fast);
+  transition:
+    color var(--duration-fast),
+    background var(--duration-fast);
   flex-shrink: 0;
   border: 1px solid var(--border);
 }
@@ -1254,7 +1420,9 @@ details summary::-webkit-details-marker {
   pointer-events: none;
   opacity: 0;
   transform: translateY(-4px);
-  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
   z-index: 100;
 }
 
@@ -1327,7 +1495,7 @@ details summary::-webkit-details-marker {
 }
 
 .inspector-key {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
   font-size: 12px;
   color: var(--accent-hover);
   background: var(--accent-subtle);

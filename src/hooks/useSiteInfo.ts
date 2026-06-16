@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface SiteInfo {
   siteId: string;
@@ -29,13 +29,15 @@ export const useSiteInfo = (): UseSiteInfoResult => {
         if (mounted) {
           setSiteInfo({
             siteId: site.siteId,
-            siteName: site.siteName || site.shortName || 'Site',
+            siteName: site.siteName || site.shortName || "Site",
           });
         }
       } catch (err) {
-        console.error('Failed to fetch site info:', err);
+        console.error("Failed to fetch site info:", err);
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch site info');
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch site info",
+          );
         }
       } finally {
         if (mounted) {
@@ -44,7 +46,7 @@ export const useSiteInfo = (): UseSiteInfoResult => {
       }
     };
 
-    fetchSiteInfo();
+    void fetchSiteInfo();
 
     return () => {
       mounted = false;

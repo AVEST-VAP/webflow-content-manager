@@ -1,11 +1,17 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 
 export interface ConfirmOptions {
   title: string;
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: 'danger' | 'default';
+  variant?: "danger" | "default";
 }
 
 export type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
@@ -16,26 +22,33 @@ interface ConfirmState {
 }
 
 const DEFAULT_OPTIONS: ConfirmOptions = {
-  title: '',
-  description: '',
-  confirmLabel: 'Confirmer',
-  cancelLabel: 'Annuler',
-  variant: 'default',
+  title: "",
+  description: "",
+  confirmLabel: "Confirmer",
+  cancelLabel: "Annuler",
+  variant: "default",
 };
 
 export const ConfirmContext = createContext<ConfirmFn | null>(null);
 
 export const useConfirm = (): ConfirmFn => {
   const fn = useContext(ConfirmContext);
-  if (!fn) throw new Error('useConfirm must be used within ConfirmDialogProvider');
+  if (!fn)
+    throw new Error("useConfirm must be used within ConfirmDialogProvider");
   return fn;
 };
 
 export const useConfirmState = () => {
-  const [state, setState] = useState<ConfirmState>({ open: false, options: DEFAULT_OPTIONS });
+  const [state, setState] = useState<ConfirmState>({
+    open: false,
+    options: DEFAULT_OPTIONS,
+  });
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
 
   const confirm: ConfirmFn = useCallback((options) => {
+    // Resolve any still-pending confirmation (cancelled) before starting a new
+    // one, so its promise never leaks.
+    resolveRef.current?.(false);
     setState({ open: true, options: { ...DEFAULT_OPTIONS, ...options } });
     return new Promise<boolean>((resolve) => {
       resolveRef.current = resolve;

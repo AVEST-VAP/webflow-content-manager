@@ -1,63 +1,31 @@
-import { useReducer, useCallback } from 'react';
-import { WordingData, DeploymentReport } from '../types';
-import { DuplicateKey } from '../utils/csvParser';
+import { useReducer, useMemo } from "react";
+import {
+  WordingData,
+  DeploymentReport,
+  Change,
+  SeoEntry,
+  PagePreview,
+  PreviewSummary,
+  PreviewData,
+  SectionGroup,
+  ScanProgress,
+} from "../types";
+import { DuplicateKey } from "../utils/csvParser";
 
-// Types for preview data
-export interface Change {
-  key: string;
-  hasValue: boolean;
-  newValue?: string;
-}
-
-export interface SeoEntry {
-  field: string;
-  value: string;
-}
-
-export interface PagePreview {
-  pageName: string;
-  changes: Change[];
-  missingKeys: string[];
-  stats: {
-    total: number;
-    withValue: number;
-    missing: number;
-  };
-  seoKeys?: SeoEntry[];
-}
-
-export interface PreviewSummary {
-  totalPages: number;
-  totalElements: number;
-  totalWithValue: number;
-  totalMissing: number;
-  unusedKeys: string[];
-}
-
-export interface PreviewData {
-  single?: boolean;
-  changes?: Change[];
-  missingKeys?: string[];
-  pagesPreviews?: PagePreview[];
-  summary?: PreviewSummary;
-}
-
-export interface SectionGroup {
-  sectionName: string;
-  changes: Change[];
-}
-
-export interface ScanProgress {
-  currentPage: string;
-  completed: number;
-  total: number;
-  mode?: 'scan' | 'deploy';
-  currentKey?: string;
-  allPages?: string[];
-}
+// These data shapes live in ../types (single source of truth); re-exported here
+// so existing consumers that import them from this module keep working.
+export type {
+  Change,
+  SeoEntry,
+  PagePreview,
+  PreviewSummary,
+  PreviewData,
+  SectionGroup,
+  ScanProgress,
+};
 
 // App state
-export type AppStep = 'input' | 'preview' | 'result' | 'scan-progress';
+export type AppStep = "input" | "preview" | "result" | "scan-progress";
 
 export interface AppState {
   step: AppStep;
@@ -73,29 +41,36 @@ export interface AppState {
 
 // Actions
 type AppAction =
-  | { type: 'SET_STEP'; payload: AppStep }
-  | { type: 'SET_JSON_INPUT'; payload: string }
-  | { type: 'SET_WORDING_DATA'; payload: WordingData | null }
-  | { type: 'SET_PREVIEW_DATA'; payload: PreviewData | null }
-  | { type: 'SET_REPORT'; payload: DeploymentReport | null }
-  | { type: 'SET_ERROR'; payload: string }
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_SCAN_PROGRESS'; payload: ScanProgress | null }
-  | { type: 'SET_DUPLICATE_KEYS'; payload: DuplicateKey[] }
-  | { type: 'LOAD_JSON_SUCCESS'; payload: { wordingData: WordingData; jsonInput: string; duplicateKeys?: DuplicateKey[] } }
-  | { type: 'START_SCAN' }
-  | { type: 'SCAN_COMPLETE'; payload: PreviewData }
-  | { type: 'DEPLOY_COMPLETE'; payload: DeploymentReport }
-  | { type: 'RESET' }
-  | { type: 'CLOSE' };
+  | { type: "SET_STEP"; payload: AppStep }
+  | { type: "SET_JSON_INPUT"; payload: string }
+  | { type: "SET_WORDING_DATA"; payload: WordingData | null }
+  | { type: "SET_PREVIEW_DATA"; payload: PreviewData | null }
+  | { type: "SET_REPORT"; payload: DeploymentReport | null }
+  | { type: "SET_ERROR"; payload: string }
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_SCAN_PROGRESS"; payload: ScanProgress | null }
+  | { type: "SET_DUPLICATE_KEYS"; payload: DuplicateKey[] }
+  | {
+      type: "LOAD_JSON_SUCCESS";
+      payload: {
+        wordingData: WordingData;
+        jsonInput: string;
+        duplicateKeys?: DuplicateKey[];
+      };
+    }
+  | { type: "START_SCAN" }
+  | { type: "SCAN_COMPLETE"; payload: PreviewData }
+  | { type: "DEPLOY_COMPLETE"; payload: DeploymentReport }
+  | { type: "RESET" }
+  | { type: "CLOSE" };
 
 const initialState: AppState = {
-  step: 'input',
-  jsonInput: '',
+  step: "input",
+  jsonInput: "",
   wordingData: null,
   previewData: null,
   report: null,
-  error: '',
+  error: "",
   loading: false,
   scanProgress: null,
   duplicateKeys: [],
@@ -103,62 +78,66 @@ const initialState: AppState = {
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'SET_STEP':
+    case "SET_STEP":
       return { ...state, step: action.payload };
-    case 'SET_JSON_INPUT':
+    case "SET_JSON_INPUT":
       return { ...state, jsonInput: action.payload };
-    case 'SET_WORDING_DATA':
+    case "SET_WORDING_DATA":
       return { ...state, wordingData: action.payload };
-    case 'SET_PREVIEW_DATA':
+    case "SET_PREVIEW_DATA":
       return { ...state, previewData: action.payload };
-    case 'SET_REPORT':
+    case "SET_REPORT":
       return { ...state, report: action.payload };
-    case 'SET_ERROR':
+    case "SET_ERROR":
       return { ...state, error: action.payload };
-    case 'SET_LOADING':
+    case "SET_LOADING":
       return { ...state, loading: action.payload };
-    case 'SET_SCAN_PROGRESS':
+    case "SET_SCAN_PROGRESS":
       return { ...state, scanProgress: action.payload };
-    case 'SET_DUPLICATE_KEYS':
+    case "SET_DUPLICATE_KEYS":
       return { ...state, duplicateKeys: action.payload };
-    case 'LOAD_JSON_SUCCESS':
+    case "LOAD_JSON_SUCCESS":
       return {
         ...state,
         wordingData: action.payload.wordingData,
         jsonInput: action.payload.jsonInput,
         duplicateKeys: action.payload.duplicateKeys ?? [],
-        error: '',
+        error: "",
       };
-    case 'START_SCAN':
+    case "START_SCAN":
       return {
         ...state,
         loading: true,
-        error: '',
-        step: 'scan-progress',
-        scanProgress: { currentPage: 'Initializing...', completed: 0, total: 0 },
+        error: "",
+        step: "scan-progress",
+        scanProgress: {
+          currentPage: "Initializing...",
+          completed: 0,
+          total: 0,
+        },
       };
-    case 'SCAN_COMPLETE':
+    case "SCAN_COMPLETE":
       return {
         ...state,
         loading: false,
         previewData: action.payload,
-        step: 'preview',
+        step: "preview",
       };
-    case 'DEPLOY_COMPLETE':
+    case "DEPLOY_COMPLETE":
       return {
         ...state,
         loading: false,
         report: action.payload,
-        step: 'result',
+        step: "result",
       };
-    case 'RESET':
+    case "RESET":
       return {
         ...initialState,
         jsonInput: state.jsonInput,
         wordingData: state.wordingData,
         duplicateKeys: [],
       };
-    case 'CLOSE':
+    case "CLOSE":
       return { ...initialState };
     default:
       return state;
@@ -172,25 +151,46 @@ function appReducer(state: AppState, action: AppAction): AppState {
 export const useAppState = () => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Action creators for cleaner API
-  const actions = {
-    setStep: useCallback((step: AppStep) => dispatch({ type: 'SET_STEP', payload: step }), []),
-    setJsonInput: useCallback((input: string) => dispatch({ type: 'SET_JSON_INPUT', payload: input }), []),
-    setWordingData: useCallback((data: WordingData | null) => dispatch({ type: 'SET_WORDING_DATA', payload: data }), []),
-    setPreviewData: useCallback((data: PreviewData | null) => dispatch({ type: 'SET_PREVIEW_DATA', payload: data }), []),
-    setReport: useCallback((report: DeploymentReport | null) => dispatch({ type: 'SET_REPORT', payload: report }), []),
-    setError: useCallback((error: string) => dispatch({ type: 'SET_ERROR', payload: error }), []),
-    setLoading: useCallback((loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading }), []),
-    setScanProgress: useCallback((progress: ScanProgress | null) => dispatch({ type: 'SET_SCAN_PROGRESS', payload: progress }), []),
-    setDuplicateKeys: useCallback((keys: DuplicateKey[]) => dispatch({ type: 'SET_DUPLICATE_KEYS', payload: keys }), []),
-    loadJsonSuccess: useCallback((wordingData: WordingData, jsonInput: string, duplicateKeys?: DuplicateKey[]) =>
-      dispatch({ type: 'LOAD_JSON_SUCCESS', payload: { wordingData, jsonInput, duplicateKeys } }), []),
-    startScan: useCallback(() => dispatch({ type: 'START_SCAN' }), []),
-    scanComplete: useCallback((data: PreviewData) => dispatch({ type: 'SCAN_COMPLETE', payload: data }), []),
-    deployComplete: useCallback((report: DeploymentReport) => dispatch({ type: 'DEPLOY_COMPLETE', payload: report }), []),
-    reset: useCallback(() => dispatch({ type: 'RESET' }), []),
-    close: useCallback(() => dispatch({ type: 'CLOSE' }), []),
-  };
+  // `dispatch` is referentially stable, so the action creators are memoized
+  // once and `actions` keeps a stable identity across renders.
+  const actions = useMemo(
+    () => ({
+      setStep: (step: AppStep) => dispatch({ type: "SET_STEP", payload: step }),
+      setJsonInput: (input: string) =>
+        dispatch({ type: "SET_JSON_INPUT", payload: input }),
+      setWordingData: (data: WordingData | null) =>
+        dispatch({ type: "SET_WORDING_DATA", payload: data }),
+      setPreviewData: (data: PreviewData | null) =>
+        dispatch({ type: "SET_PREVIEW_DATA", payload: data }),
+      setReport: (report: DeploymentReport | null) =>
+        dispatch({ type: "SET_REPORT", payload: report }),
+      setError: (error: string) =>
+        dispatch({ type: "SET_ERROR", payload: error }),
+      setLoading: (loading: boolean) =>
+        dispatch({ type: "SET_LOADING", payload: loading }),
+      setScanProgress: (progress: ScanProgress | null) =>
+        dispatch({ type: "SET_SCAN_PROGRESS", payload: progress }),
+      setDuplicateKeys: (keys: DuplicateKey[]) =>
+        dispatch({ type: "SET_DUPLICATE_KEYS", payload: keys }),
+      loadJsonSuccess: (
+        wordingData: WordingData,
+        jsonInput: string,
+        duplicateKeys?: DuplicateKey[],
+      ) =>
+        dispatch({
+          type: "LOAD_JSON_SUCCESS",
+          payload: { wordingData, jsonInput, duplicateKeys },
+        }),
+      startScan: () => dispatch({ type: "START_SCAN" }),
+      scanComplete: (data: PreviewData) =>
+        dispatch({ type: "SCAN_COMPLETE", payload: data }),
+      deployComplete: (report: DeploymentReport) =>
+        dispatch({ type: "DEPLOY_COMPLETE", payload: report }),
+      reset: () => dispatch({ type: "RESET" }),
+      close: () => dispatch({ type: "CLOSE" }),
+    }),
+    [],
+  );
 
   return { state, actions };
 };

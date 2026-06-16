@@ -1,13 +1,7 @@
-import Papa from 'papaparse';
+import Papa from "papaparse";
 
-// CSV row structure from Google Sheets export
-interface CSVRow {
-  key?: string;
-  Key?: string;
-  data?: string;
-  Data?: string;
-  [key: string]: string | undefined;
-}
+// A parsed CSV row, keyed by its (trimmed) header names.
+type CSVRow = Record<string, string | undefined>;
 
 export interface ParsedRow {
   key: string;
@@ -25,39 +19,71 @@ export interface CSVParseResult {
   duplicateKeys: DuplicateKey[];
 }
 
+// PapaParse options shared by both parsers. `transformHeader` trims column
+// names so a stray space in a Google Sheets export ("Key ") still matches.
+const PARSE_CONFIG = {
+  header: true as const,
+  skipEmptyLines: true as const,
+  transformHeader: (header: string): string => header.trim(),
+};
+
 /**
- * Parse CSV text and extract Key/Data columns
- * Supports both lowercase and capitalized column names
- * Handles quoted fields with commas correctly via PapaParse
+ * Extracts the key/value pair from a parsed row, tolerant to column casing and
+ * stray spaces ("Key"/"key", " Data "). Only the key is required: an empty
+ * value is a deliberate "clear this content" instruction (aligned with the JSON
+ * path, which also deploys empty strings).
+ */
+const extractKeyValue = (row: CSVRow): ParsedRow => {
+  const normalized: Record<string, string> = {};
+  for (const [column, value] of Object.entries(row)) {
+    if (value != null) normalized[column.trim().toLowerCase()] = value;
+  }
+  return {
+    key: (normalized["key"] ?? "").trim(),
+    value: (normalized["data"] ?? "").trim(),
+  };
+};
+
+/**
+ * Builds the error thrown when no usable row was found, distinguishing
+ * "columns missing" from "columns present but no data row".
+ */
+const buildEmptyError = (fields: string[] | undefined): Error => {
+  const normalized = (fields ?? []).map((f) => f.trim().toLowerCase());
+  const hasColumns = normalized.includes("key") && normalized.includes("data");
+  return hasColumns
+    ? new Error(
+        'Le CSV contient les colonnes "Key" et "Data" mais aucune ligne de données.',
+      )
+    : new Error('Le CSV doit contenir les colonnes "Key" et "Data".');
+};
+
+/**
+ * Parse CSV text and extract Key/Data columns.
+ * Tolerant to column casing and surrounding spaces; quoted fields with commas
+ * are handled by PapaParse.
  */
 export const parseCSV = (csvText: string): Promise<ParsedRow[]> => {
   return new Promise((resolve, reject) => {
     Papa.parse<CSVRow>(csvText, {
-      header: true,
-      skipEmptyLines: true,
+      ...PARSE_CONFIG,
       complete: (results) => {
         const rows: ParsedRow[] = [];
-
         for (const row of results.data) {
-          // Support both "key"/"Key" and "data"/"Data" column names
-          const key = (row.key || row.Key || '').trim();
-          const value = (row.data || row.Data || '').trim();
-
-          if (key && value) {
-            rows.push({ key, value });
-          }
+          const { key, value } = extractKeyValue(row);
+          if (key) rows.push({ key, value });
         }
 
         if (rows.length === 0) {
-          reject(new Error('CSV must contain "Key" and "Data" columns with at least one row of data'));
+          reject(buildEmptyError(results.meta.fields));
           return;
         }
 
         resolve(rows);
       },
-      error: (error) => {
-        reject(new Error(`CSV parsing error: ${error.message}`));
-      }
+      error: (error: Error) => {
+        reject(new Error(`Erreur de parsing CSV : ${error.message}`));
+      },
     });
   });
 };
@@ -66,33 +92,32 @@ export const parseCSV = (csvText: string): Promise<ParsedRow[]> => {
  * Parse CSV text and detect duplicate keys.
  * Returns rows (last-value-wins, same as parseCSV) plus a list of duplicates.
  */
-export const parseCSVWithDuplicates = (csvText: string): Promise<CSVParseResult> => {
+export const parseCSVWithDuplicates = (
+  csvText: string,
+): Promise<CSVParseResult> => {
   return new Promise((resolve, reject) => {
     Papa.parse<CSVRow>(csvText, {
-      header: true,
-      skipEmptyLines: true,
+      ...PARSE_CONFIG,
       complete: (results) => {
         const rows: ParsedRow[] = [];
         const keyCounts = new Map<string, string[]>();
 
         for (const row of results.data) {
-          const key = (row.key || row.Key || '').trim();
-          const value = (row.data || row.Data || '').trim();
+          const { key, value } = extractKeyValue(row);
+          if (!key) continue;
 
-          if (key && value) {
-            rows.push({ key, value });
+          rows.push({ key, value });
 
-            const existing = keyCounts.get(key);
-            if (existing) {
-              existing.push(value);
-            } else {
-              keyCounts.set(key, [value]);
-            }
+          const existing = keyCounts.get(key);
+          if (existing) {
+            existing.push(value);
+          } else {
+            keyCounts.set(key, [value]);
           }
         }
 
         if (rows.length === 0) {
-          reject(new Error('CSV must contain "Key" and "Data" columns with at least one row of data'));
+          reject(buildEmptyError(results.meta.fields));
           return;
         }
 
@@ -105,9 +130,9 @@ export const parseCSVWithDuplicates = (csvText: string): Promise<CSVParseResult>
 
         resolve({ rows, duplicateKeys });
       },
-      error: (error) => {
-        reject(new Error(`CSV parsing error: ${error.message}`));
-      }
+      error: (error: Error) => {
+        reject(new Error(`Erreur de parsing CSV : ${error.message}`));
+      },
     });
   });
 };
